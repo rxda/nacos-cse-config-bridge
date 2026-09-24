@@ -1,0 +1,7 @@
+.git
+.direnv
+.idea
+target/*
+!target/srv-nacos-cse-config-bridge-0.1.0-SNAPSHOT.jar
+*.iml
+README.md

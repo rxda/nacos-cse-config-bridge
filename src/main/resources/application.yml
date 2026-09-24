@@ -1,0 +1,53 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: srv-nacos-cse-config-bridge
+
+srv-nacos-cse-config-bridge:
+  migration:
+    # This endpoint writes source Nacos values into CSE. Enable explicitly.
+    enabled: ${NACOS_MIGRATION_ENABLED:false}
+  grpc:
+    # Nacos Config clients calculate this as the configured HTTP port + 1000.
+    # Set explicitly when the HTTP port is not the normal fixed port.
+    port: ${NACOS_GRPC_PORT:0}
+    enabled: ${NACOS_GRPC_ENABLED:true}
+    max-inbound-message-size: ${NACOS_GRPC_MAX_INBOUND_MESSAGE_SIZE:16777216}
+  service-center:
+    # Registration is opt-in. A Config client only gets an instance when it
+    # supplies the three business endpoint labels; the gRPC source port is never used.
+    enabled: ${CSE_SERVICE_CENTER_ENABLED:false}
+    server-addr: ${CSE_SERVICE_CENTER_ADDR:}
+    project: ${CSE_SERVICE_CENTER_PROJECT:${CSE_PROJECT:default}}
+    tenant-name: ${CSE_SERVICE_CENTER_TENANT_NAME:default}
+    app-id: ${CSE_SERVICE_CENTER_APP_ID:default}
+    environment: ${CSE_SERVICE_CENTER_ENVIRONMENT:}
+    version: ${CSE_SERVICE_CENTER_VERSION:1.0.0}
+    heartbeat-interval-seconds: ${CSE_SERVICE_CENTER_HEARTBEAT_INTERVAL_SECONDS:15}
+    instance-enabled: ${CSE_SERVICE_CENTER_INSTANCE_ENABLED:true}
+    service-name-label: ${CSE_SERVICE_CENTER_SERVICE_NAME_LABEL:AppName}
+    # Nacos 2.5.2 prefixes labels from nacos.app.conn.labels with "app_".
+    # The proxy accepts both app_serviceHost/servicePort/serviceProtocol and the raw names.
+    host-label: ${CSE_SERVICE_CENTER_HOST_LABEL:serviceHost}
+    port-label: ${CSE_SERVICE_CENTER_PORT_LABEL:servicePort}
+    protocol-label: ${CSE_SERVICE_CENTER_PROTOCOL_LABEL:serviceProtocol}
+    # Optional advanced label containing a full URI. Disabled by default because the
+    # standard Nacos label collector rejects ":", "/" and "://" in label values.
+    endpoint-label: ${CSE_SERVICE_CENTER_ENDPOINT_LABEL:}
+    default-service-name: ${CSE_SERVICE_CENTER_DEFAULT_SERVICE_NAME:}
+    ssl-enabled: ${CSE_SERVICE_CENTER_SSL_ENABLED:false}
+  kie:
+    server-addr: ${CSE_CONFIG_SERVER_ADDR:}
+    project: ${CSE_PROJECT:}
+    app: ${CSE_CONFIG_APP:nacos-config-bridge}
+    polling-wait-seconds: ${CSE_POLLING_WAIT_SECONDS:29}
+    socket-timeout-seconds: ${CSE_SOCKET_TIMEOUT_SECONDS:40}
+    ssl-enabled: ${CSE_SSL_ENABLED:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

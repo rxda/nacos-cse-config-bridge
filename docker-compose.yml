@@ -1,0 +1,73 @@
+services:
+  nacos:
+    image: nacos/nacos-server:v2.5.2
+    container_name: nacos
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+      PREFER_HOST_MODE: hostname
+      NACOS_AUTH_ENABLE: true
+      NACOS_AUTH_TOKEN: U8Gv2X4e7Kz2tNvPHhj/KFZxrtKUCS89feR5E3tgZ6o=
+      NACOS_AUTH_IDENTITY_KEY: srv-nacos-cse-config-bridge-local
+      NACOS_AUTH_IDENTITY_VALUE: srv-nacos-cse-config-bridge-local
+    ports:
+      # Nacos HTTP API/UI. This is only the standalone Nacos server itself;
+      # application services should use srv-nacos-cse-config-bridge:8080 instead.
+      - "8848:8848"
+      # Nacos 2.x Config client gRPC (8848 + 1000). Needed by the comparison
+      # test when it reads directly from the source Nacos server.
+      - "9848:9848"
+    volumes:
+      - nacos-data:/home/nacos/data
+      - nacos-logs:/home/nacos/logs
+
+  cse:
+    image: ghcr.io/renfei/cse:2.1.5
+    container_name: cse
+    restart: unless-stopped
+    ports:
+      # Service Center, CSE dashboard and KIE Config Center.
+      - "30100:30100"
+      - "30103:30103"
+      - "30110:30110"
+    volumes:
+      - cse-data:/var/lib/cse
+
+  srv-nacos-cse-config-bridge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: srv-nacos-cse-config-bridge
+    restart: unless-stopped
+    depends_on:
+      - cse
+    environment:
+      SERVER_PORT: 8080
+      # KIE API is exposed by the CSE container on its internal network.
+      CSE_CONFIG_SERVER_ADDR: http://cse:30110
+      CSE_PROJECT: ${CSE_PROJECT:-default}
+      CSE_CONFIG_APP: ${CSE_CONFIG_APP:-nacos-config-bridge}
+      # The bundled Compose environment owns a local Service Center, so panel
+      # registration is enabled by default. Set to false to disable it.
+      CSE_SERVICE_CENTER_ENABLED: ${CSE_SERVICE_CENTER_ENABLED:-true}
+      CSE_SERVICE_CENTER_ADDR: http://cse:30100
+      CSE_SERVICE_CENTER_PROJECT: ${CSE_SERVICE_CENTER_PROJECT:-default}
+      CSE_SERVICE_CENTER_TENANT_NAME: ${CSE_SERVICE_CENTER_TENANT_NAME:-default}
+      CSE_SERVICE_CENTER_APP_ID: ${CSE_SERVICE_CENTER_APP_ID:-default}
+      CSE_SERVICE_CENTER_ENVIRONMENT: ${CSE_SERVICE_CENTER_ENVIRONMENT:-development}
+      CSE_POLLING_WAIT_SECONDS: ${CSE_POLLING_WAIT_SECONDS:-29}
+      CSE_SOCKET_TIMEOUT_SECONDS: ${CSE_SOCKET_TIMEOUT_SECONDS:-40}
+      # Compose enables the one-shot Nacos -> KIE migration endpoint for this
+      # local environment; set NACOS_MIGRATION_ENABLED=false to disable it.
+      NACOS_MIGRATION_ENABLED: ${NACOS_MIGRATION_ENABLED:-true}
+      CSE_SSL_ENABLED: ${CSE_SSL_ENABLED:-false}
+    ports:
+      # Nacos-compatible Config HTTP API exposed by this proxy.
+      - "8080:8080"
+      # Nacos 2.x Config client gRPC (8080 + 1000).
+      - "9080:9080"
+
+volumes:
+  nacos-data:
+  nacos-logs:
+  cse-data:
