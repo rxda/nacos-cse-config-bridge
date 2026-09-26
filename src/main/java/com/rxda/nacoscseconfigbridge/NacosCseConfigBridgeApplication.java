@@ -9,6 +9,9 @@ import com.rxda.nacoscseconfigbridge.config.NacosGrpcProperties;
 import com.rxda.nacoscseconfigbridge.config.MigrationProperties;
 import com.rxda.nacoscseconfigbridge.config.ServiceCenterProperties;
 
+/**
+ * Starts the Spring Boot application and registers all bridge configuration properties.
+ */
 @SpringBootApplication
 @EnableConfigurationProperties({
         KieProperties.class,
@@ -18,6 +21,11 @@ import com.rxda.nacoscseconfigbridge.config.ServiceCenterProperties;
 })
 public class NacosCseConfigBridgeApplication {
 
+    /**
+     * Boots the embedded HTTP and Nacos gRPC endpoints.
+     *
+     * @param args standard Spring Boot command-line arguments
+     */
     static void main(String[] args) {
         SpringApplication.run(NacosCseConfigBridgeApplication.class, args);
     }

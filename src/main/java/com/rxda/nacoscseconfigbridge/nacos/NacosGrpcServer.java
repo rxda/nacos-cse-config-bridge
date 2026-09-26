@@ -86,6 +86,16 @@ public class NacosGrpcServer implements SmartLifecycle {
     private volatile Server server;
     private final Map<SocketAddress, ClientConnection> connections = new ConcurrentHashMap<>();
 
+    /**
+     * Creates the Nacos gRPC server and wires it to the KIE listener service.
+     *
+     * @param properties gRPC port and message-size settings
+     * @param configStore exact configuration store
+     * @param listenerService long-poll listener coordinator
+     * @param clientRegistration optional Service Center registration boundary
+     * @param grpcExecutor executor for gRPC callbacks
+     * @param httpPort embedded HTTP port used to derive the default gRPC port
+     */
     public NacosGrpcServer(
             NacosGrpcProperties properties,
             KieConfigStore configStore,
@@ -101,6 +111,7 @@ public class NacosGrpcServer implements SmartLifecycle {
         this.httpPort = httpPort;
     }
 
+    /** Starts the gRPC listener when the compatibility endpoint is enabled. */
     @Override
     public synchronized void start() {
         if (!properties.isEnabled() || server != null) {
@@ -121,6 +132,7 @@ public class NacosGrpcServer implements SmartLifecycle {
         }
     }
 
+    /** Stops the gRPC listener and releases all client watches. */
     @Override
     public synchronized void stop() {
         if (server != null) {
@@ -131,27 +143,32 @@ public class NacosGrpcServer implements SmartLifecycle {
         connections.clear();
     }
 
+    /** Stops the server and invokes Spring's lifecycle callback. */
     @Override
     public void stop(Runnable callback) {
         stop();
         callback.run();
     }
 
+    /** Returns whether the underlying gRPC server is accepting requests. */
     @Override
     public boolean isRunning() {
         Server current = server;
         return current != null && !current.isShutdown();
     }
 
+    /** Returns whether Spring should start this lifecycle automatically. */
     @Override
     public boolean isAutoStartup() {
         return true;
     }
 
+    /** Places shutdown after ordinary application components. */
     @Override
     public int getPhase() {
         return Integer.MAX_VALUE;
     }
+    /** Routes a decoded Nacos request to the appropriate protocol handler. */
 
     private Response dispatch(Request request, SocketAddress remoteAddress) {
         if (request instanceof ServerCheckRequest) {
@@ -178,6 +195,7 @@ public class NacosGrpcServer implements SmartLifecycle {
         return ErrorResponse.build(NacosException.SERVER_ERROR,
                 "Unsupported Nacos Config request: " + request.getClass().getSimpleName());
     }
+    /** Reads the requested configuration or metadata. */
 
     private ConfigQueryResponse query(ConfigQueryRequest request) {
         NacosConfigKey key = new NacosConfigKey(request.getDataId(), request.getGroup(), request.getTenant());
@@ -189,13 +207,14 @@ public class NacosGrpcServer implements SmartLifecycle {
             }
             ConfigQueryResponse response = ConfigQueryResponse.buildSuccessResponse(result.content().get());
             response.setMd5(configStore.md5(result.content().get()));
-            response.setContentType("text");
+            response.setContentType(NacosConfigFormat.fromNacosType(result.valueType(), key.dataId()));
             return response;
         } catch (RuntimeException e) {
             return ConfigQueryResponse.buildFailResponse(NacosException.SERVER_ERROR,
                     "Unable to read CSE KIE configuration: " + safeMessage(e));
         }
     }
+    /** Lists the requested resources. */
 
     private ConfigChangeBatchListenResponse listen(ConfigBatchListenRequest request, SocketAddress remoteAddress) {
         List<NacosListenerEntry> entries = request.getConfigListenContexts().stream()
@@ -226,17 +245,20 @@ public class NacosGrpcServer implements SmartLifecycle {
                     "Unable to read CSE KIE configuration: " + safeMessage(e));
         }
     }
+    /** Returns a safe diagnostic message for a protocol error. */
 
     private String safeMessage(RuntimeException exception) {
         String message = exception.getMessage();
         return message == null || message.isBlank() ? exception.getClass().getSimpleName() : message;
     }
+    /** Dispatches a request and serializes its response into a gRPC payload. */
 
     private Payload responsePayload(Request request, SocketAddress remoteAddress) {
         Response response = dispatch(request, remoteAddress);
         response.setRequestId(request.getRequestId());
         return GrpcUtils.convert(response);
     }
+    /** Decodes a gRPC payload and verifies that it contains a Nacos request. */
 
     private Request parse(Payload payload) {
         Object parsed = GrpcUtils.parse(payload);
@@ -246,7 +268,9 @@ public class NacosGrpcServer implements SmartLifecycle {
         return request;
     }
 
+    /** Handles unary Nacos health, query, and listener requests. */
     private final class UnaryRequestService extends RequestGrpc.RequestImplBase {
+        /** Handles one unary Nacos RPC and returns its response payload. */
         @Override
         public void request(Payload payload, StreamObserver<Payload> observer) {
             try {
@@ -259,12 +283,15 @@ public class NacosGrpcServer implements SmartLifecycle {
         }
     }
 
+    /** Handles connection setup and server-push notifications. */
     private final class BidirectionalRequestService extends BiRequestStreamGrpc.BiRequestStreamImplBase {
+        /** Opens a bidirectional stream for setup and server-push notifications. */
         @Override
         public StreamObserver<Payload> requestBiStream(StreamObserver<Payload> observer) {
             SocketAddress remoteAddress = REMOTE_ADDRESS.get();
             ClientConnection connection = new ClientConnection(remoteAddress, observer);
             return new StreamObserver<>() {
+                /** Processes one request received on the bidirectional stream. */
                 @Override
                 public void onNext(Payload payload) {
                     try {
@@ -282,11 +309,13 @@ public class NacosGrpcServer implements SmartLifecycle {
                     }
                 }
 
+                /** Closes the connection after a stream error. */
                 @Override
                 public void onError(Throwable throwable) {
                     connection.close();
                 }
 
+                /** Closes the connection after the client completes the stream. */
                 @Override
                 public void onCompleted() {
                     connection.close();
@@ -296,6 +325,7 @@ public class NacosGrpcServer implements SmartLifecycle {
         }
     }
 
+    /** Tracks watches and registration state for one Nacos gRPC connection. */
     private final class ClientConnection {
         private final SocketAddress remoteAddress;
         private final StreamObserver<Payload> observer;
@@ -303,6 +333,7 @@ public class NacosGrpcServer implements SmartLifecycle {
         private final AtomicBoolean closed = new AtomicBoolean();
         private final AtomicReference<NacosClientRegistration.Registration> registration = new AtomicReference<>();
         private volatile boolean attached;
+        /** Creates per-connection watch and registration state. */
 
         private ClientConnection(SocketAddress remoteAddress, StreamObserver<Payload> observer) {
             this.remoteAddress = remoteAddress;
@@ -314,6 +345,7 @@ public class NacosGrpcServer implements SmartLifecycle {
                 }
             }
         }
+        /** Registers the client and captures its connection metadata. */
 
         private void attach(ConnectionSetupRequest request) {
             if (closed.get() || attached) {
@@ -327,6 +359,7 @@ public class NacosGrpcServer implements SmartLifecycle {
                 created.close();
             }
         }
+        /** Reconciles active watches with the latest client listener batch. */
 
         private void replaceWatches(List<NacosListenerEntry> entries, List<NacosConfigKey> immediatelyChanged) {
             if (closed.get()) {
@@ -351,6 +384,7 @@ public class NacosGrpcServer implements SmartLifecycle {
                 }
             });
         }
+        /** Pushes a configuration-change notification to the client. */
 
         private void push(NacosConfigKey key) {
             if (closed.get()) {
@@ -369,6 +403,7 @@ public class NacosGrpcServer implements SmartLifecycle {
                 close();
             }
         }
+        /** Closes this resource and releases associated state. */
 
         private void close() {
             if (!closed.compareAndSet(false, true)) {
@@ -385,6 +420,7 @@ public class NacosGrpcServer implements SmartLifecycle {
             }
         }
     }
+    /** Extracts a printable host from a transport address. */
 
     private static String remoteHost(SocketAddress address) {
         if (address instanceof InetSocketAddress inetAddress) {
@@ -393,7 +429,9 @@ public class NacosGrpcServer implements SmartLifecycle {
         return address == null ? "" : address.toString();
     }
 
+    /** Copies the transport peer address into the gRPC request context. */
     private static final class RemoteAddressInterceptor implements ServerInterceptor {
+        /** Stores the transport peer address for downstream request handlers. */
         @Override
         public <ReqT, RespT> ServerCall.Listener<ReqT> interceptCall(
                 ServerCall<ReqT, RespT> call,

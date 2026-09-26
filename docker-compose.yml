@@ -41,8 +41,13 @@ services:
     restart: unless-stopped
     depends_on:
       - cse
+    # The bridge is intentionally bounded; without a cgroup limit the JVM
+    # derives a multi-gigabyte max heap from the host instead of the service
+    #'s actual needs. Override BRIDGE_MEMORY_LIMIT for larger deployments.
+    mem_limit: ${BRIDGE_MEMORY_LIMIT:-384m}
     environment:
       SERVER_PORT: 8080
+      JAVA_TOOL_OPTIONS: "${JAVA_TOOL_OPTIONS:--XX:+UseCompactObjectHeaders -Xms32m -Xmx256m -XX:AOTMode=auto -XX:AOTCache=/app/app.aot}"
       # KIE API is exposed by the CSE container on its internal network.
       CSE_CONFIG_SERVER_ADDR: http://cse:30110
       CSE_PROJECT: ${CSE_PROJECT:-default}

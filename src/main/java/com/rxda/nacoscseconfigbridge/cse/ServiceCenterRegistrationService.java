@@ -46,7 +46,7 @@ import com.rxda.nacoscseconfigbridge.nacos.NacosClientRegistration;
 public class ServiceCenterRegistrationService implements NacosClientRegistration {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ServiceCenterRegistrationService.class);
-    private static final String NACOS_SOURCE = "nacos-config-proxy";
+    private static final String NACOS_SOURCE = "SDK";
     private static final String DEFAULT_PROTOCOL = "http";
     private static final String DEFAULT_CSE_ENVIRONMENT = "development";
     private static final Set<String> CSE_ENVIRONMENTS =
@@ -58,6 +58,13 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
     private final Map<String, ActiveRegistration> activeInstances = new HashMap<>();
     private final Object registrationLock = new Object();
 
+    /**
+     * Creates the observer with optional Service Center registration.
+     *
+     * @param properties registration settings
+     * @param authHeaderProviders authentication providers used by the Service Center client
+     * @param scheduler scheduler for instance heartbeats
+     */
     @Autowired
     public ServiceCenterRegistrationService(
             ServiceCenterProperties properties,
@@ -65,12 +72,25 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
             @Qualifier("nacosServiceCenterExecutor") ScheduledExecutorService scheduler) {
         this.properties = properties;
         this.scheduler = scheduler;
-        this.client = properties.isEnabled() ? createClient(properties, authHeaderProviders) : null;
-        if (properties.isEnabled()) {
+        // An enabled flag without an address should not prevent the Nacos
+        // compatibility endpoint from starting. This also lets deployments
+        // enable registration by setting only CSE_SERVICE_CENTER_ADDR.
+        boolean configured = properties.isEnabled() && StringUtils.hasText(properties.getServerAddr());
+        this.client = configured ? createClient(properties, authHeaderProviders) : null;
+        if (configured) {
             LOGGER.info("CSE Service Center observation registration is enabled: {}", properties.getServerAddr());
+        } else if (properties.isEnabled()) {
+            LOGGER.warn("CSE Service Center registration is enabled but no server address was configured");
         }
     }
 
+    /**
+     * Creates a registration service with an injected client, primarily for tests.
+     *
+     * @param properties registration settings
+     * @param client Service Center client, or {@code null} when registration is disabled
+     * @param scheduler scheduler for instance heartbeats
+     */
     ServiceCenterRegistrationService(
             ServiceCenterProperties properties,
             ServiceCenterClient client,
@@ -80,6 +100,14 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         this.scheduler = scheduler;
     }
 
+    /**
+     * Mirrors one Nacos gRPC connection into Service Center.
+     *
+     * @param tenant Nacos tenant associated with the connection
+     * @param labels Nacos connection labels
+     * @param remoteHost peer address of the Nacos client
+     * @return registration handle; closing it releases the instance reference
+     */
     @Override
     public Registration register(String tenant, Map<String, String> labels, String remoteHost) {
         if (!properties.isEnabled() || client == null) {
@@ -118,7 +146,14 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
             };
         }
     }
-
+    /**
+     * Looks up or creates the display microservice for a Nacos client.
+     *
+     * @param serviceName service name advertised by the client
+     * @param tenant Nacos tenant associated with the client
+     * @param labels client connection labels
+     * @return Service Center microservice identifier
+     */
     private String ensureMicroservice(String serviceName, String tenant, Map<String, String> labels) {
         Microservice service = new Microservice();
         service.setAppId(properties.getAppId());
@@ -129,7 +164,7 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         service.setStatus(MicroserviceStatus.UP);
 
         Framework framework = new Framework();
-        framework.setName("Nacos Config");
+        framework.setName("NacosConfig");
         framework.setVersion(value(labels, "clientVersion", "2.x"));
         service.setFramework(framework);
 
@@ -153,7 +188,15 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         }
         return created.getServiceId();
     }
-
+    /**
+     * Registers a business endpoint and schedules its Service Center heartbeat.
+     *
+     * @param serviceId Service Center microservice identifier
+     * @param serviceName display name used in log messages
+     * @param endpoint validated business endpoint
+     * @param labels client labels copied to the instance metadata
+     * @return reference-counted registration handle
+     */
     private Registration registerInstance(
             String serviceId, String serviceName, Endpoint endpoint, Map<String, String> labels) {
         String key = serviceId + "|" + endpoint.value();
@@ -190,7 +233,13 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
             return active;
         }
     }
-
+    /**
+     * Sends one heartbeat and keeps failures isolated from the protocol endpoint.
+     *
+     * @param serviceName service name used in log messages
+     * @param serviceId Service Center microservice identifier
+     * @param instanceId Service Center instance identifier
+     */
     private void sendHeartbeat(String serviceName, String serviceId, String instanceId) {
         try {
             if (!client.sendHeartBeat(serviceId, instanceId)) {
@@ -200,7 +249,13 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
             LOGGER.warn("CSE heartbeat failed for {} instance {}", serviceName, instanceId, e);
         }
     }
-
+    /**
+     * Resolves a business endpoint from client labels and configured fallbacks.
+     *
+     * @param labels client connection labels
+     * @param remoteHost gRPC peer address used as a host fallback
+     * @return validated endpoint, or {@code null} when no usable port exists
+     */
     private Endpoint endpoint(Map<String, String> labels, String remoteHost) {
         String explicit = value(labels, properties.getEndpointLabel());
         if (StringUtils.hasText(explicit)) {
@@ -208,7 +263,11 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         }
 
         String portText = value(labels, properties.getPortLabel());
-        String host = value(labels, properties.getHostLabel(), remoteHost);
+        if (!StringUtils.hasText(portText) && properties.getInstancePort() > 0) {
+            portText = String.valueOf(properties.getInstancePort());
+        }
+        String host = value(labels, properties.getHostLabel(),
+                StringUtils.hasText(properties.getInstanceHost()) ? properties.getInstanceHost() : remoteHost);
         if (!StringUtils.hasText(portText) || !StringUtils.hasText(host)) {
             return null;
         }
@@ -229,7 +288,12 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
             return null;
         }
     }
-
+    /**
+     * Parses a complete endpoint label, adding HTTP when no scheme is present.
+     *
+     * @param explicit endpoint label
+     * @return validated endpoint, or {@code null} when the label is invalid
+     */
     private Endpoint parseExplicitEndpoint(String explicit) {
         try {
             URI uri = URI.create(explicit.contains("://") ? explicit : DEFAULT_PROTOCOL + "://" + explicit);
@@ -242,7 +306,12 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
             return null;
         }
     }
-
+    /**
+     * Maps a Nacos tenant to one of the CSE environment names.
+     *
+     * @param tenant Nacos tenant value
+     * @return valid CSE environment name
+     */
     private String environment(String tenant) {
         if (StringUtils.hasText(tenant)) {
             String candidate = tenant.trim();
@@ -254,11 +323,21 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         String fallback = properties.getEnvironment() == null ? "" : properties.getEnvironment().trim();
         return CSE_ENVIRONMENTS.contains(fallback) ? fallback : DEFAULT_CSE_ENVIRONMENT;
     }
-
+    /**
+     * Brackets an IPv6 host before it is inserted into a URI.
+     *
+     * @param host host name or address
+     * @return URI-safe host representation
+     */
     private static String hostForUri(String host) {
         return host.contains(":") && !host.startsWith("[") ? "[" + host + "]" : host;
     }
-
+    /**
+     * Removes URI brackets from an IPv6 host returned by {@link URI}.
+     *
+     * @param host URI host
+     * @return unbracketed host
+     */
     private static String unbracketHost(String host) {
         return host.startsWith("[") && host.endsWith("]") ? host.substring(1, host.length() - 1) : host;
     }
@@ -271,18 +350,34 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         if (!StringUtils.hasText(key)) {
             return null;
         }
-        String direct = labels.get(key);
-        if (StringUtils.hasText(direct)) {
-            return direct;
+        // Nacos 2.x includes default raw labels (for example AppName=unknown)
+        // together with the configured app_* labels. Prefer the configured
+        // prefixed value whenever it is present.
+        String prefixed = labels.get("app_" + key);
+        if (StringUtils.hasText(prefixed)) {
+            return prefixed;
         }
-        return labels.get("app_" + key);
+        return labels.get(key);
     }
-
+    /**
+     * Reads a label and returns a fallback when it is blank.
+     *
+     * @param labels connection labels
+     * @param key logical label name
+     * @param fallback fallback value
+     * @return label value or fallback
+     */
     private static String value(Map<String, String> labels, String key, String fallback) {
         String value = value(labels, key);
         return StringUtils.hasText(value) ? value : fallback;
     }
-
+    /**
+     * Creates the Service Center client used for registration and heartbeats.
+     *
+     * @param properties registration settings
+     * @param authHeaderProviders authentication providers
+     * @return configured Service Center client
+     */
     private ServiceCenterClient createClient(
             ServiceCenterProperties properties, List<AuthHeaderProvider> authHeaderProviders) {
         if (!StringUtils.hasText(properties.getServerAddr())) {
@@ -311,6 +406,9 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
                 Collections.emptyMap());
     }
 
+    /**
+     * Reference-counted handle for one registered business instance.
+     */
     private final class ActiveRegistration implements Registration {
         private final String key;
         private final String serviceId;
@@ -318,19 +416,31 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         private final ScheduledFuture<?> heartbeat;
         private int references = 1;
         private boolean closed;
-
+        /**
+         * Creates a reference-counted registration handle.
+         *
+         * @param key deduplication key for the endpoint
+         * @param serviceId Service Center microservice identifier
+         * @param instanceId Service Center instance identifier
+         * @param heartbeat scheduled heartbeat task
+         */
         private ActiveRegistration(String key, String serviceId, String instanceId, ScheduledFuture<?> heartbeat) {
             this.key = key;
             this.serviceId = serviceId;
             this.instanceId = instanceId;
             this.heartbeat = heartbeat;
         }
-
+        /**
+         * Adds one consumer reference to this registration.
+         *
+         * @return this registration handle
+         */
         private ActiveRegistration acquire() {
             references++;
             return this;
         }
 
+        /** Closes this resource and releases associated state. */
         @Override
         public void close() {
             synchronized (registrationLock) {
@@ -354,6 +464,7 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         }
     }
 
+    /** A validated business endpoint advertised by a Nacos client. */
     record Endpoint(String host, String value) {
     }
 }

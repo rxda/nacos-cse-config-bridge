@@ -20,6 +20,7 @@ import org.springframework.web.client.RestClient;
 
 import com.rxda.nacoscseconfigbridge.config.KieClientFactory;
 import com.rxda.nacoscseconfigbridge.config.KieProperties;
+import com.rxda.nacoscseconfigbridge.nacos.NacosConfigFormat;
 
 class NacosMigrationServiceTest {
 
@@ -111,6 +112,45 @@ class NacosMigrationServiceTest {
     }
 
     @Test
+    void discoveredNacosTypeTakesPriorityOverDataIdSuffix() {
+        expectConfigList("dev", 1, """
+                {"totalCount":1,"pageNumber":1,"pagesAvailable":1,
+                 "pageItems":[{"dataId":"settings.conf","group":"DEFAULT_GROUP","tenant":"dev",
+                 "type":"json"}]}
+                """, null);
+        expectConfigContent("dev", "settings.conf", "DEFAULT_GROUP", "{\"enabled\":true}", null);
+        expectKieWrite("settings.conf", "dev", "DEFAULT_GROUP", "{\"enabled\":true}", "json");
+
+        NacosMigrationResponse response = service.migrate(new NacosMigrationRequest(
+                NACOS, "dev", null, false, false, null));
+
+        assertThat(response.total()).isEqualTo(1);
+        assertThat(response.success()).isEqualTo(1);
+        server.verify();
+    }
+
+    @Test
+    void migrationPreservesTypedFormatForPropertiesEpropertiesAndJson() {
+        expectConfigContent("dev", "application.properties", "DEFAULT_GROUP", "feature.enabled=true\n", null);
+        expectKieWrite("application.properties", "dev", "DEFAULT_GROUP", "feature.enabled=true\n");
+        expectConfigContent("dev", "legacy.eproperties", "DEFAULT_GROUP", "feature.legacy=true\n", null);
+        expectKieWrite("legacy.eproperties", "dev", "DEFAULT_GROUP", "feature.legacy=true\n");
+        expectConfigContent("dev", "application.json", "DEFAULT_GROUP", "{\"enabled\":true}", null);
+        expectKieWrite("application.json", "dev", "DEFAULT_GROUP", "{\"enabled\":true}");
+
+        NacosMigrationResponse response = service.migrate(new NacosMigrationRequest(
+                NACOS, "dev", null, false, false,
+                List.of(
+                        new NacosMigrationRequest.ConfigItem("application.properties", null, null),
+                        new NacosMigrationRequest.ConfigItem("legacy.eproperties", null, null),
+                        new NacosMigrationRequest.ConfigItem("application.json", null, null))));
+
+        assertThat(response.total()).isEqualTo(3);
+        assertThat(response.success()).isEqualTo(3);
+        server.verify();
+    }
+
+    @Test
     void allNamespacesRejectsAnExplicitConfigSelection() {
         NacosMigrationRequest request = new NacosMigrationRequest(
                 NACOS, null, null, false, true,
@@ -156,14 +196,28 @@ class NacosMigrationServiceTest {
     }
 
     private void expectKieWrite(String dataId, String environment, String group, String content) {
+        expectKieWrite(dataId, environment, group, content, NacosConfigFormat.fromDataId(dataId));
+    }
+
+    private void expectKieWrite(
+            String dataId, String environment, String group, String content, String valueType) {
         server.expect(requestTo(KIE))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().json("""
-                        {"key":"%s","value":"%s","value_type":"text","status":"enabled",
+                        {"key":"%s","value":"%s","value_type":"%s","status":"enabled",
                          "labels":{"app":"migration-test","environment":"%s","service":"%s",
                                    "nacos-data-id":"%s"}}
-                        """.formatted(dataId, content, environment, group, dataId)))
+                        """.formatted(dataId, escapeJson(content), valueType,
+                                environment, group, dataId)))
                 .andRespond(withSuccess());
+    }
+
+    private String escapeJson(String value) {
+        return value.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n")
+                .replace("\t", "\\t");
     }
 
     private String configListPage(int offset, int itemCount, int totalCount, int pagesAvailable) {

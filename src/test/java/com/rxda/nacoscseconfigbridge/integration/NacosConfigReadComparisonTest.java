@@ -48,6 +48,16 @@ class NacosConfigReadComparisonTest {
         Properties properties = new Properties();
         properties.setProperty(PropertyKeyConst.SERVER_ADDR, address);
         properties.setProperty(PropertyKeyConst.CONFIG_REQUEST_TIMEOUT, "-1");
+        String connectionLabels = System.getProperty("nacos.app.conn.labels");
+        if (connectionLabels != null && !connectionLabels.isBlank()) {
+            properties.setProperty("nacos.app.conn.labels", connectionLabels);
+        }
+        String username = System.getProperty("nacos.username");
+        String password = System.getProperty("nacos.password");
+        if (username != null && !username.isBlank() && password != null) {
+            properties.setProperty(PropertyKeyConst.USERNAME, username);
+            properties.setProperty(PropertyKeyConst.PASSWORD, password);
+        }
         if (namespace != null && !namespace.isBlank()) {
             properties.setProperty(PropertyKeyConst.NAMESPACE, namespace);
         }

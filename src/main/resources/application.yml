@@ -2,6 +2,10 @@ server:
   port: ${SERVER_PORT:8080}
 
 spring:
+  threads:
+    virtual:
+      # Spring MVC/Tomcat request handling also uses JDK virtual threads.
+      enabled: true
   application:
     name: srv-nacos-cse-config-bridge
 
@@ -16,9 +20,10 @@ srv-nacos-cse-config-bridge:
     enabled: ${NACOS_GRPC_ENABLED:true}
     max-inbound-message-size: ${NACOS_GRPC_MAX_INBOUND_MESSAGE_SIZE:16777216}
   service-center:
-    # Registration is opt-in. A Config client only gets an instance when it
-    # supplies the three business endpoint labels; the gRPC source port is never used.
-    enabled: ${CSE_SERVICE_CENTER_ENABLED:false}
+    # Registration is active when CSE_SERVICE_CENTER_ADDR is set. A Config client
+    # only gets an instance when it supplies a business endpoint; the gRPC source
+    # port is never used.
+    enabled: ${CSE_SERVICE_CENTER_ENABLED:true}
     server-addr: ${CSE_SERVICE_CENTER_ADDR:}
     project: ${CSE_SERVICE_CENTER_PROJECT:${CSE_PROJECT:default}}
     tenant-name: ${CSE_SERVICE_CENTER_TENANT_NAME:default}
@@ -33,6 +38,10 @@ srv-nacos-cse-config-bridge:
     host-label: ${CSE_SERVICE_CENTER_HOST_LABEL:serviceHost}
     port-label: ${CSE_SERVICE_CENTER_PORT_LABEL:servicePort}
     protocol-label: ${CSE_SERVICE_CENTER_PROTOCOL_LABEL:serviceProtocol}
+    # Optional fallback for clients that do not send business endpoint labels.
+    # Keep 0 to avoid registering a guessed instance endpoint.
+    instance-port: ${CSE_SERVICE_CENTER_INSTANCE_PORT:0}
+    instance-host: ${CSE_SERVICE_CENTER_INSTANCE_HOST:}
     # Optional advanced label containing a full URI. Disabled by default because the
     # standard Nacos label collector rejects ":", "/" and "://" in label values.
     endpoint-label: ${CSE_SERVICE_CENTER_ENDPOINT_LABEL:}
@@ -41,6 +50,9 @@ srv-nacos-cse-config-bridge:
   kie:
     server-addr: ${CSE_CONFIG_SERVER_ADDR:}
     project: ${CSE_PROJECT:}
+    # This identifies the source/configuration domain, not the Nacos client AppName.
+    # Use a different value for each independent Nacos source, and the same value
+    # for bridge replicas serving the same source.
     app: ${CSE_CONFIG_APP:nacos-config-bridge}
     polling-wait-seconds: ${CSE_POLLING_WAIT_SECONDS:29}
     socket-timeout-seconds: ${CSE_SOCKET_TIMEOUT_SECONDS:40}
