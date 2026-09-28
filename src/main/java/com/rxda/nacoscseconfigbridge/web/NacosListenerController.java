@@ -18,7 +18,7 @@ import com.rxda.nacoscseconfigbridge.nacos.NacosListenerParser;
 import com.rxda.nacoscseconfigbridge.nacos.NacosListenerService;
 
 /**
- * Implements the Nacos HTTP long-poll listener endpoint.
+ * 实现 Nacos HTTP 长轮询监听端点。
  */
 
 @RestController
@@ -29,11 +29,11 @@ public class NacosListenerController {
     private final NacosListenerService listenerService;
     private final Executor listenerExecutor;
     /**
-     * Creates the asynchronous Nacos listener controller.
+     * 创建异步的 Nacos 监听控制器。
      *
-     * @param parser listener payload parser and serializer
-     * @param listenerService KIE-backed listener coordinator
-     * @param nacosListenerExecutor executor for long-poll requests
+     * @param parser 监听载荷的解析与序列化器
+     * @param listenerService KIE 监听协调器
+     * @param nacosListenerExecutor 长轮询请求用的线程池
      */
     public NacosListenerController(
             NacosListenerParser parser,
@@ -45,11 +45,11 @@ public class NacosListenerController {
     }
 
     /**
-     * Checks listener entries and waits asynchronously for KIE-backed changes.
+     * 检查监听条目并异步等待 KIE 侧的变更。
      *
-     * @param body form-body listener payload
-     * @param header equivalent listener payload supplied as a header
-     * @return future completed with the Nacos listener response
+     * @param body 表单体中的监听载荷
+     * @param header 以请求头形式提供的等效监听载荷
+     * @return 以 Nacos 监听响应完成的 future
      */
     @PostMapping(value = "/listener", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
             produces = MediaType.TEXT_PLAIN_VALUE)

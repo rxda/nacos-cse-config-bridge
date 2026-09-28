@@ -49,7 +49,7 @@
             <groupId>org.apache.servicecomb</groupId>
             <artifactId>config-kie-client</artifactId>
         </dependency>
-        <!-- java-chassis-dependencies excludes all transitive dependencies of Guava. -->
+        <!-- java-chassis-dependencies 排除了 Guava 的全部传递依赖。 -->
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>failureaccess</artifactId>
@@ -58,7 +58,7 @@
             <groupId>org.apache.servicecomb</groupId>
             <artifactId>service-center-client</artifactId>
         </dependency>
-        <!-- Nacos 2.x Config gRPC protocol classes and shaded gRPC runtime. -->
+        <!-- Nacos 2.x Config gRPC 协议类和 shaded gRPC 运行时。 -->
         <dependency>
             <groupId>com.alibaba.nacos</groupId>
             <artifactId>nacos-client</artifactId>

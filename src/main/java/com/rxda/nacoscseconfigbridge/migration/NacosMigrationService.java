@@ -20,11 +20,11 @@ import com.rxda.nacoscseconfigbridge.nacos.NacosConfigFormat;
 import com.rxda.nacoscseconfigbridge.nacos.NacosConfigKey;
 
 /**
- * One-shot Nacos HTTP to KIE importer. It never writes through Nacos APIs.
+ * 一次性的 Nacos HTTP 到 KIE 导入器。绝不经过 Nacos API 写数据。
  *
- * <p>When {@code configs} is omitted, the service discovers every config in
- * {@code sourceNamespace}. With {@code allNamespaces}, it first discovers all
- * Nacos namespaces and then discovers every config in each namespace.</p>
+ * <p>未指定 {@code configs} 时，服务会发现 {@code sourceNamespace} 下的所有配置。
+ * 开启 {@code allNamespaces} 后，会先发现所有 Nacos 命名空间，
+ * 再逐个发现每个命名空间下的全部配置。</p>
  */
 @Service
 public class NacosMigrationService {
@@ -35,9 +35,9 @@ public class NacosMigrationService {
     private final RestClient restClient;
 
     /**
-     * Creates a migration service using Spring's HTTP client.
+     * 使用 Spring 的 HTTP 客户端创建迁移服务。
      *
-     * @param kieClientFactory destination KIE connection factory
+     * @param kieClientFactory 目标 KIE 连接工厂
      */
     @Autowired
     public NacosMigrationService(KieClientFactory kieClientFactory) {
@@ -50,10 +50,10 @@ public class NacosMigrationService {
     }
 
     /**
-     * Imports the selected Nacos configurations into exact KIE identities.
+     * 将选定的 Nacos 配置导入为精确的 KIE 标识。
      *
-     * @param request source, namespace, and overwrite options
-     * @return per-item migration summary
+     * @param request 源、命名空间和覆盖选项
+     * @return 逐条迁移汇总
      */
     public NacosMigrationResponse migrate(NacosMigrationRequest request) {
         validate(request);
@@ -63,7 +63,7 @@ public class NacosMigrationService {
         }
         return summarize(results);
     }
-    /** Resolves explicit migration items or discovers the requested source scope. */
+    /** 解析明确指定的迁移条目，或按请求的源范围做发现。 */
 
     private List<NacosMigrationRequest.ConfigItem> resolveConfigs(NacosMigrationRequest request) {
         if (request.allNamespaces()) {
@@ -81,7 +81,7 @@ public class NacosMigrationService {
         }
         return discoverConfigs(request, effectiveTenant(null, request.sourceNamespace()));
     }
-    /** Discovers every configuration item in one Nacos namespace. */
+    /** 发现一个 Nacos 命名空间下的全部配置条目。 */
 
     private List<String> listNamespaces(NacosMigrationRequest request) {
         var builder = UriComponentsBuilder.fromUriString(normalizeAddress(request.sourceServerAddr()))
@@ -103,7 +103,7 @@ public class NacosMigrationService {
         }
         return List.copyOf(namespaces);
     }
-    /** Reads one page at a time from the source Nacos configuration list API. */
+    /** 每次从源 Nacos 配置列表 API 读取一页。 */
 
     private List<NacosMigrationRequest.ConfigItem> discoverConfigs(NacosMigrationRequest request, String namespace) {
         List<NacosMigrationRequest.ConfigItem> configs = new ArrayList<>();
@@ -156,7 +156,7 @@ public class NacosMigrationService {
         }
         return configs;
     }
-    /** Fetches and writes one source configuration, preserving its stored type. */
+    /** 拉取并写入一个源配置，保留其存储类型。 */
 
     private NacosMigrationResponse.ItemResult migrateOne(
             NacosMigrationRequest request, NacosMigrationRequest.ConfigItem item) {
@@ -180,7 +180,7 @@ public class NacosMigrationService {
             return result(dataId, group, tenant, "FAILED", safeMessage(e));
         }
     }
-    /** Reads the requested configuration or metadata. */
+    /** 读取请求的配置或元数据。 */
 
     private String readSource(NacosMigrationRequest request, NacosConfigKey key) {
         var builder = UriComponentsBuilder.fromUriString(normalizeAddress(request.sourceServerAddr()))
@@ -198,7 +198,7 @@ public class NacosMigrationService {
             throw e;
         }
     }
-    /** Returns a JSON value as a map suitable for the KIE write API. */
+    /** 把 JSON 值转为适合 KIE 写 API 的 Map。 */
 
     private <T> T getJson(UriComponentsBuilder builder, Class<T> type) {
         return restClient.get()
@@ -206,14 +206,14 @@ public class NacosMigrationService {
                 .retrieve()
                 .body(type);
     }
-    /** Adds the source Nacos access token to an outgoing request when configured. */
+    /** 配置了源 Nacos 访问令牌时，将其加到出站请求上。 */
 
     private void applySourceAccessToken(UriComponentsBuilder builder, NacosMigrationRequest request) {
         if (request.sourceAccessToken() != null && !request.sourceAccessToken().isBlank()) {
             builder.queryParam("accessToken", request.sourceAccessToken());
         }
     }
-    /** Creates one exact KIE document for a migrated Nacos configuration. */
+    /** 为迁移的 Nacos 配置创建精确的 KIE 文档。 */
 
     private void writeKie(NacosConfigKey key, String content, String nacosType, boolean overwrite) {
         Map<String, String> labels = labels(key);
@@ -238,7 +238,7 @@ public class NacosMigrationService {
                 .toBodilessEntity();
     }
 
-    /** Finds an existing KIE document with the same exact identity labels. */
+    /** 查找具有相同精确标识标签的已有 KIE 文档。 */
     @SuppressWarnings("unchecked")
     private String findExistingId(NacosConfigKey key, Map<String, String> labels) {
         var builder = UriComponentsBuilder.fromUri(kieCollectionUri())
@@ -259,9 +259,8 @@ public class NacosMigrationService {
             if (!(value instanceof Map<?, ?> item) || item.get("id") == null) {
                 continue;
             }
-            // Keep migration upserts on the same one-to-one identity as reads.
-            // Do not update a KIE hierarchy/fallback document merely because
-            // the server returned it for a non-exact query.
+            // 迁移的更新必须落在与读取一致的一对一标识上。
+            // 不能因为服务端对非精确查询返回了层级/回退文档就去更新它。
             if (key.dataId().equals(String.valueOf(item.get("key")))
                     && labelsEqual(item.get("labels"), labels)) {
                 return item.get("id").toString();
@@ -269,7 +268,7 @@ public class NacosMigrationService {
         }
         return null;
     }
-    /** Compares KIE labels without depending on map iteration order. */
+    /** 比较 KIE 标签，不依赖 Map 迭代顺序。 */
 
     private boolean labelsEqual(Object actual, Map<String, String> expected) {
         if (!(actual instanceof Map<?, ?> actualMap) || actualMap.size() != expected.size()) {
@@ -282,7 +281,7 @@ public class NacosMigrationService {
         }
         return true;
     }
-    /** Updates an existing KIE document while preserving its identity. */
+    /** 更新已有的 KIE 文档，同时保留其标识。 */
 
     private void updateKie(String id, String dataId, String nacosType, String content) {
         Map<String, Object> body = Map.of(
@@ -296,7 +295,7 @@ public class NacosMigrationService {
                 .retrieve()
                 .toBodilessEntity();
     }
-    /** Builds the exact KIE labels corresponding to a Nacos configuration key. */
+    /** 构建 Nacos 配置键对应的精确 KIE 标签。 */
 
     private Map<String, String> labels(NacosConfigKey key) {
         Map<String, String> labels = new LinkedHashMap<>();
@@ -310,7 +309,7 @@ public class NacosMigrationService {
         labels.put("nacos-id", kieClientFactory.app());
         return labels;
     }
-    /** Builds the KIE collection endpoint for the configured project. */
+    /** 构建配置的项目对应的 KIE 集合端点。 */
 
     private java.net.URI kieCollectionUri() {
         return UriComponentsBuilder.fromUriString(kieClientFactory.address())
@@ -320,20 +319,20 @@ public class NacosMigrationService {
                 .build()
                 .toUri();
     }
-    /** Applies authentication and content headers to a KIE request. */
+    /** 给 KIE 请求加上认证和内容头。 */
 
     private void applyKieHeaders(HttpHeaders headers) {
         kieClientFactory.authHeaders().forEach(headers::set);
         headers.set(HttpHeaders.CONTENT_TYPE, "application/json");
     }
-    /** Validates the required migration request fields. */
+    /** 校验迁移请求的必填字段。 */
 
     private void validate(NacosMigrationRequest request) {
         if (request == null || request.sourceServerAddr() == null || request.sourceServerAddr().isBlank()) {
             throw new IllegalArgumentException("sourceServerAddr is required");
         }
     }
-    /** Aggregates per-item outcomes into the migration response. */
+    /** 把逐条结果汇总为迁移响应。 */
 
     private NacosMigrationResponse summarize(List<NacosMigrationResponse.ItemResult> results) {
         int success = (int) results.stream().filter(item -> "SUCCESS".equals(item.status())).count();

@@ -35,12 +35,11 @@ import com.rxda.nacoscseconfigbridge.config.ServiceCenterProperties;
 import com.rxda.nacoscseconfigbridge.nacos.NacosClientRegistration;
 
 /**
- * Observes Nacos Config gRPC clients and mirrors them into CSE Service Center.
+ * 观察 Nacos Config gRPC 客户端，并将其镜像到 CSE 服务中心。
  *
- * <p>A Config client is not a service-discovery client. Therefore this class
- * creates a microservice for display and only creates an instance when the
- * client explicitly supplies business endpoint labels. It never treats the
- * Nacos gRPC source port as the application's port.</p>
+ * <p>Config 客户端不是服务发现客户端。因此该类仅为展示创建微服务，
+ * 只有当客户端明确提供业务端点标签时才创建实例。绝不会把 Nacos gRPC
+ * 源端口当作应用端口使用。</p>
  */
 @Service
 public class ServiceCenterRegistrationService implements NacosClientRegistration {
@@ -59,11 +58,11 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
     private final Object registrationLock = new Object();
 
     /**
-     * Creates the observer with optional Service Center registration.
+     * 创建带可选服务中心注册的观察者。
      *
-     * @param properties registration settings
-     * @param authHeaderProviders authentication providers used by the Service Center client
-     * @param scheduler scheduler for instance heartbeats
+     * @param properties 注册设置
+     * @param authHeaderProviders 服务中心客户端使用的认证提供者
+     * @param scheduler 实例心跳调度器
      */
     @Autowired
     public ServiceCenterRegistrationService(
@@ -72,9 +71,8 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
             @Qualifier("nacosServiceCenterExecutor") ScheduledExecutorService scheduler) {
         this.properties = properties;
         this.scheduler = scheduler;
-        // An enabled flag without an address should not prevent the Nacos
-        // compatibility endpoint from starting. This also lets deployments
-        // enable registration by setting only CSE_SERVICE_CENTER_ADDR.
+        // 启用了开关但没配地址时，不应阻止 Nacos 兼容端点启动。
+        // 这样部署时只需设置 CSE_SERVICE_CENTER_ADDR 即可启用注册。
         boolean configured = properties.isEnabled() && StringUtils.hasText(properties.getServerAddr());
         this.client = configured ? createClient(properties, authHeaderProviders) : null;
         if (configured) {
@@ -85,11 +83,11 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
     }
 
     /**
-     * Creates a registration service with an injected client, primarily for tests.
+     * 创建使用注入客户端的注册服务，主要用于测试。
      *
-     * @param properties registration settings
-     * @param client Service Center client, or {@code null} when registration is disabled
-     * @param scheduler scheduler for instance heartbeats
+     * @param properties 注册设置
+     * @param client 服务中心客户端，禁用注册时为 {@code null}
+     * @param scheduler 实例心跳调度器
      */
     ServiceCenterRegistrationService(
             ServiceCenterProperties properties,
@@ -101,12 +99,12 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
     }
 
     /**
-     * Mirrors one Nacos gRPC connection into Service Center.
+     * 将一个 Nacos gRPC 连接镜像到服务中心。
      *
-     * @param tenant Nacos tenant associated with the connection
-     * @param labels Nacos connection labels
-     * @param remoteHost peer address of the Nacos client
-     * @return registration handle; closing it releases the instance reference
+     * @param tenant 连接关联的 Nacos 租户
+     * @param labels Nacos 连接标签
+     * @param remoteHost Nacos 客户端的对端地址
+     * @return 注册句柄；关闭它会释放实例引用
      */
     @Override
     public Registration register(String tenant, Map<String, String> labels, String remoteHost) {
@@ -140,19 +138,19 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
             }
             return registerInstance(serviceId, serviceName, endpoint, safeLabels);
         } catch (RuntimeException e) {
-            // Service Center must not take down the Nacos Config compatibility path.
+            // 服务中心不能拖垮 Nacos Config 兼容链路。
             LOGGER.warn("Unable to mirror Nacos client {} into CSE Service Center", serviceName, e);
             return () -> {
             };
         }
     }
     /**
-     * Looks up or creates the display microservice for a Nacos client.
+     * 为 Nacos 客户端查找或创建展示用微服务。
      *
-     * @param serviceName service name advertised by the client
-     * @param tenant Nacos tenant associated with the client
-     * @param labels client connection labels
-     * @return Service Center microservice identifier
+     * @param serviceName 客户端上报的服务名
+     * @param tenant 客户端关联的 Nacos 租户
+     * @param labels 客户端连接标签
+     * @return 服务中心微服务标识
      */
     private String ensureMicroservice(String serviceName, String tenant, Map<String, String> labels) {
         Microservice service = new Microservice();
@@ -179,7 +177,7 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         }
         RegisteredMicroserviceResponse created = client.registerMicroservice(service);
         if (created == null || !StringUtils.hasText(created.getServiceId())) {
-            // A concurrent proxy/client may have created it between query and create.
+            // 并发的代理/客户端可能在查询和创建之间已经创建了它。
             RegisteredMicroserviceResponse retry = client.queryServiceId(service);
             if (retry == null || !StringUtils.hasText(retry.getServiceId())) {
                 throw new IllegalStateException("CSE did not return a microservice id");
@@ -189,13 +187,13 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         return created.getServiceId();
     }
     /**
-     * Registers a business endpoint and schedules its Service Center heartbeat.
+     * 注册业务端点，并为其安排服务中心心跳。
      *
-     * @param serviceId Service Center microservice identifier
-     * @param serviceName display name used in log messages
-     * @param endpoint validated business endpoint
-     * @param labels client labels copied to the instance metadata
-     * @return reference-counted registration handle
+     * @param serviceId 服务中心微服务标识
+     * @param serviceName 日志中使用的展示名
+     * @param endpoint 校验通过的业务端点
+     * @param labels 复制到实例元数据的客户端标签
+     * @return 引用计数的注册句柄
      */
     private Registration registerInstance(
             String serviceId, String serviceName, Endpoint endpoint, Map<String, String> labels) {
@@ -234,11 +232,11 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         }
     }
     /**
-     * Sends one heartbeat and keeps failures isolated from the protocol endpoint.
+     * 发送一次心跳，并将失败隔离在协议端点之外。
      *
-     * @param serviceName service name used in log messages
-     * @param serviceId Service Center microservice identifier
-     * @param instanceId Service Center instance identifier
+     * @param serviceName 日志中使用的服务名
+     * @param serviceId 服务中心微服务标识
+     * @param instanceId 服务中心实例标识
      */
     private void sendHeartbeat(String serviceName, String serviceId, String instanceId) {
         try {
@@ -250,11 +248,11 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         }
     }
     /**
-     * Resolves a business endpoint from client labels and configured fallbacks.
+     * 从客户端标签和配置的回退值解析业务端点。
      *
-     * @param labels client connection labels
-     * @param remoteHost gRPC peer address used as a host fallback
-     * @return validated endpoint, or {@code null} when no usable port exists
+     * @param labels 客户端连接标签
+     * @param remoteHost 用作主机回退的 gRPC 对端地址
+     * @return 校验通过的端点，没有可用端口时返回 {@code null}
      */
     private Endpoint endpoint(Map<String, String> labels, String remoteHost) {
         String explicit = value(labels, properties.getEndpointLabel());
@@ -289,10 +287,10 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         }
     }
     /**
-     * Parses a complete endpoint label, adding HTTP when no scheme is present.
+     * 解析完整的端点标签，没有 scheme 时补上 HTTP。
      *
-     * @param explicit endpoint label
-     * @return validated endpoint, or {@code null} when the label is invalid
+     * @param explicit 端点标签
+     * @return 校验通过的端点，标签非法时返回 {@code null}
      */
     private Endpoint parseExplicitEndpoint(String explicit) {
         try {
@@ -307,10 +305,10 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         }
     }
     /**
-     * Maps a Nacos tenant to one of the CSE environment names.
+     * 将 Nacos 租户映射为 CSE 环境名之一。
      *
-     * @param tenant Nacos tenant value
-     * @return valid CSE environment name
+     * @param tenant Nacos 租户值
+     * @return 合法的 CSE 环境名
      */
     private String environment(String tenant) {
         if (StringUtils.hasText(tenant)) {
@@ -324,35 +322,34 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         return CSE_ENVIRONMENTS.contains(fallback) ? fallback : DEFAULT_CSE_ENVIRONMENT;
     }
     /**
-     * Brackets an IPv6 host before it is inserted into a URI.
+     * 在把 IPv6 主机拼入 URI 之前加上方括号。
      *
-     * @param host host name or address
-     * @return URI-safe host representation
+     * @param host 主机名或地址
+     * @return URI 安全的主机表示
      */
     private static String hostForUri(String host) {
         return host.contains(":") && !host.startsWith("[") ? "[" + host + "]" : host;
     }
     /**
-     * Removes URI brackets from an IPv6 host returned by {@link URI}.
+     * 去掉 {@link URI} 返回的 IPv6 主机两端的方括号。
      *
-     * @param host URI host
-     * @return unbracketed host
+     * @param host URI 主机
+     * @return 去掉方括号的主机
      */
     private static String unbracketHost(String host) {
         return host.startsWith("[") && host.endsWith("]") ? host.substring(1, host.length() - 1) : host;
     }
 
     /**
-     * Reads a configured connection label. Nacos 2.5.2 adds {@code app_} to
-     * every key from {@code nacos.app.conn.labels}, so accept both forms.
+     * 读取配置的连接标签。Nacos 2.5.2 会给 {@code nacos.app.conn.labels}
+     * 中的每个键加上 {@code app_} 前缀，因此两种形式都接受。
      */
     private static String value(Map<String, String> labels, String key) {
         if (!StringUtils.hasText(key)) {
             return null;
         }
-        // Nacos 2.x includes default raw labels (for example AppName=unknown)
-        // together with the configured app_* labels. Prefer the configured
-        // prefixed value whenever it is present.
+        // Nacos 2.x 会同时包含默认的原始标签（例如 AppName=unknown）
+        // 和配置的 app_* 标签。只要带前缀的值存在，就优先使用它。
         String prefixed = labels.get("app_" + key);
         if (StringUtils.hasText(prefixed)) {
             return prefixed;
@@ -360,23 +357,23 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         return labels.get(key);
     }
     /**
-     * Reads a label and returns a fallback when it is blank.
+     * 读取标签，标签为空时返回回退值。
      *
-     * @param labels connection labels
-     * @param key logical label name
-     * @param fallback fallback value
-     * @return label value or fallback
+     * @param labels 连接标签
+     * @param key 逻辑标签名
+     * @param fallback 回退值
+     * @return 标签值或回退值
      */
     private static String value(Map<String, String> labels, String key, String fallback) {
         String value = value(labels, key);
         return StringUtils.hasText(value) ? value : fallback;
     }
     /**
-     * Creates the Service Center client used for registration and heartbeats.
+     * 创建用于注册和心跳的服务中心客户端。
      *
-     * @param properties registration settings
-     * @param authHeaderProviders authentication providers
-     * @return configured Service Center client
+     * @param properties 注册设置
+     * @param authHeaderProviders 认证提供者
+     * @return 配置好的服务中心客户端
      */
     private ServiceCenterClient createClient(
             ServiceCenterProperties properties, List<AuthHeaderProvider> authHeaderProviders) {
@@ -407,7 +404,7 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
     }
 
     /**
-     * Reference-counted handle for one registered business instance.
+     * 单个已注册业务实例的引用计数句柄。
      */
     private final class ActiveRegistration implements Registration {
         private final String key;
@@ -417,12 +414,12 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         private int references = 1;
         private boolean closed;
         /**
-         * Creates a reference-counted registration handle.
+         * 创建引用计数的注册句柄。
          *
-         * @param key deduplication key for the endpoint
-         * @param serviceId Service Center microservice identifier
-         * @param instanceId Service Center instance identifier
-         * @param heartbeat scheduled heartbeat task
+         * @param key 端点去重键
+         * @param serviceId 服务中心微服务标识
+         * @param instanceId 服务中心实例标识
+         * @param heartbeat 定时心跳任务
          */
         private ActiveRegistration(String key, String serviceId, String instanceId, ScheduledFuture<?> heartbeat) {
             this.key = key;
@@ -431,16 +428,16 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
             this.heartbeat = heartbeat;
         }
         /**
-         * Adds one consumer reference to this registration.
+         * 为该注册增加一个消费者引用。
          *
-         * @return this registration handle
+         * @return 该注册句柄
          */
         private ActiveRegistration acquire() {
             references++;
             return this;
         }
 
-        /** Closes this resource and releases associated state. */
+        /** 关闭该资源并释放关联状态。 */
         @Override
         public void close() {
             synchronized (registrationLock) {
@@ -464,7 +461,7 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         }
     }
 
-    /** A validated business endpoint advertised by a Nacos client. */
+    /** Nacos 客户端上报的、校验通过的业务端点。 */
     record Endpoint(String host, String value) {
     }
 }

@@ -58,19 +58,18 @@ import com.rxda.nacoscseconfigbridge.cse.KieConfigStore;
 import com.rxda.nacoscseconfigbridge.config.NacosGrpcProperties;
 
 /**
- * Nacos 2.x Config gRPC compatibility endpoint.
+ * Nacos 2.x Config gRPC 兼容端点。
  *
- * <p>Nacos clients use a unary RPC for queries and batch listen requests. The
- * bidirectional stream is used for connection setup and server push requests.
- * This endpoint deliberately keeps no configuration data; every query goes to
- * KIE and a long-poll request is held by KIE until its revision changes.</p>
+ * <p>Nacos 客户端用 unary RPC 做查询和批量监听请求，双向流用于
+ * 连接建立和服务端推送。该端点刻意不保存任何配置数据；每次查询都走
+ * KIE，长轮询请求由 KIE 挂起直到版本变更。</p>
  */
 @Component
 public class NacosGrpcServer implements SmartLifecycle {
 
     static {
-        // RpcClient normally initializes this registry. The proxy is a server,
-        // so it must initialize the Nacos request/response type registry itself.
+        // 通常由 RpcClient 初始化这个注册表。但代理是以服务端身份运行的，
+        // 所以必须自己初始化 Nacos 请求/响应类型注册表。
         PayloadRegistry.init();
     }
 
@@ -87,14 +86,14 @@ public class NacosGrpcServer implements SmartLifecycle {
     private final Map<SocketAddress, ClientConnection> connections = new ConcurrentHashMap<>();
 
     /**
-     * Creates the Nacos gRPC server and wires it to the KIE listener service.
+     * 创建 Nacos gRPC 服务，并将其与 KIE 监听服务接线。
      *
-     * @param properties gRPC port and message-size settings
-     * @param configStore exact configuration store
-     * @param listenerService long-poll listener coordinator
-     * @param clientRegistration optional Service Center registration boundary
-     * @param grpcExecutor executor for gRPC callbacks
-     * @param httpPort embedded HTTP port used to derive the default gRPC port
+     * @param properties gRPC 端口与消息大小设置
+     * @param configStore 精确配置存储
+     * @param listenerService 长轮询监听协调器
+     * @param clientRegistration 可选的服务中心注册边界
+     * @param grpcExecutor gRPC 回调用线程池
+     * @param httpPort 内嵌 HTTP 端口，用于推导默认 gRPC 端口
      */
     public NacosGrpcServer(
             NacosGrpcProperties properties,
@@ -111,7 +110,7 @@ public class NacosGrpcServer implements SmartLifecycle {
         this.httpPort = httpPort;
     }
 
-    /** Starts the gRPC listener when the compatibility endpoint is enabled. */
+    /** 兼容端点启用时启动 gRPC 监听。 */
     @Override
     public synchronized void start() {
         if (!properties.isEnabled() || server != null) {
@@ -132,7 +131,7 @@ public class NacosGrpcServer implements SmartLifecycle {
         }
     }
 
-    /** Stops the gRPC listener and releases all client watches. */
+    /** 停止 gRPC 监听并释放所有客户端监听。 */
     @Override
     public synchronized void stop() {
         if (server != null) {
@@ -143,32 +142,32 @@ public class NacosGrpcServer implements SmartLifecycle {
         connections.clear();
     }
 
-    /** Stops the server and invokes Spring's lifecycle callback. */
+    /** 停止服务并调用 Spring 的生命周期回调。 */
     @Override
     public void stop(Runnable callback) {
         stop();
         callback.run();
     }
 
-    /** Returns whether the underlying gRPC server is accepting requests. */
+    /** 返回底层 gRPC 服务是否正在接受请求。 */
     @Override
     public boolean isRunning() {
         Server current = server;
         return current != null && !current.isShutdown();
     }
 
-    /** Returns whether Spring should start this lifecycle automatically. */
+    /** 返回 Spring 是否应自动启动该生命周期。 */
     @Override
     public boolean isAutoStartup() {
         return true;
     }
 
-    /** Places shutdown after ordinary application components. */
+    /** 把关闭阶段排在普通应用组件之后。 */
     @Override
     public int getPhase() {
         return Integer.MAX_VALUE;
     }
-    /** Routes a decoded Nacos request to the appropriate protocol handler. */
+    /** 把解码后的 Nacos 请求路由到相应的协议处理器。 */
 
     private Response dispatch(Request request, SocketAddress remoteAddress) {
         if (request instanceof ServerCheckRequest) {
@@ -195,7 +194,7 @@ public class NacosGrpcServer implements SmartLifecycle {
         return ErrorResponse.build(NacosException.SERVER_ERROR,
                 "Unsupported Nacos Config request: " + request.getClass().getSimpleName());
     }
-    /** Reads the requested configuration or metadata. */
+    /** 读取请求的配置或元数据。 */
 
     private ConfigQueryResponse query(ConfigQueryRequest request) {
         NacosConfigKey key = new NacosConfigKey(request.getDataId(), request.getGroup(), request.getTenant());
@@ -214,7 +213,7 @@ public class NacosGrpcServer implements SmartLifecycle {
                     "Unable to read CSE KIE configuration: " + safeMessage(e));
         }
     }
-    /** Lists the requested resources. */
+    /** 列出请求的资源。 */
 
     private ConfigChangeBatchListenResponse listen(ConfigBatchListenRequest request, SocketAddress remoteAddress) {
         List<NacosListenerEntry> entries = request.getConfigListenContexts().stream()
@@ -245,20 +244,20 @@ public class NacosGrpcServer implements SmartLifecycle {
                     "Unable to read CSE KIE configuration: " + safeMessage(e));
         }
     }
-    /** Returns a safe diagnostic message for a protocol error. */
+    /** 为协议错误返回安全的诊断信息。 */
 
     private String safeMessage(RuntimeException exception) {
         String message = exception.getMessage();
         return message == null || message.isBlank() ? exception.getClass().getSimpleName() : message;
     }
-    /** Dispatches a request and serializes its response into a gRPC payload. */
+    /** 分发请求并把响应序列化为 gRPC payload。 */
 
     private Payload responsePayload(Request request, SocketAddress remoteAddress) {
         Response response = dispatch(request, remoteAddress);
         response.setRequestId(request.getRequestId());
         return GrpcUtils.convert(response);
     }
-    /** Decodes a gRPC payload and verifies that it contains a Nacos request. */
+    /** 解码 gRPC payload，并校验其中包含的是 Nacos 请求。 */
 
     private Request parse(Payload payload) {
         Object parsed = GrpcUtils.parse(payload);
@@ -268,9 +267,9 @@ public class NacosGrpcServer implements SmartLifecycle {
         return request;
     }
 
-    /** Handles unary Nacos health, query, and listener requests. */
+    /** 处理 unary Nacos 健康检查、查询和监听请求。 */
     private final class UnaryRequestService extends RequestGrpc.RequestImplBase {
-        /** Handles one unary Nacos RPC and returns its response payload. */
+        /** 处理一个 unary Nacos RPC 并返回其响应 payload。 */
         @Override
         public void request(Payload payload, StreamObserver<Payload> observer) {
             try {
@@ -283,22 +282,22 @@ public class NacosGrpcServer implements SmartLifecycle {
         }
     }
 
-    /** Handles connection setup and server-push notifications. */
+    /** 处理连接建立和服务端推送通知。 */
     private final class BidirectionalRequestService extends BiRequestStreamGrpc.BiRequestStreamImplBase {
-        /** Opens a bidirectional stream for setup and server-push notifications. */
+        /** 为连接建立和服务端推送通知打开双向流。 */
         @Override
         public StreamObserver<Payload> requestBiStream(StreamObserver<Payload> observer) {
             SocketAddress remoteAddress = REMOTE_ADDRESS.get();
             ClientConnection connection = new ClientConnection(remoteAddress, observer);
             return new StreamObserver<>() {
-                /** Processes one request received on the bidirectional stream. */
+                /** 处理双向流上收到的一个请求。 */
                 @Override
                 public void onNext(Payload payload) {
                     try {
                         Request request = parse(payload);
                         if (request instanceof ConnectionSetupRequest) {
-                            // Nacos waits for this acknowledgement when the server
-                            // advertises capability negotiation support.
+                            // 当服务端声明支持能力协商时，
+                            // Nacos 会等待这个确认回包。
                             observer.onNext(GrpcUtils.convert(new SetupAckRequest(Map.of())));
                             connection.attach((ConnectionSetupRequest) request);
                         }
@@ -309,13 +308,13 @@ public class NacosGrpcServer implements SmartLifecycle {
                     }
                 }
 
-                /** Closes the connection after a stream error. */
+                /** 流出错后关闭该连接。 */
                 @Override
                 public void onError(Throwable throwable) {
                     connection.close();
                 }
 
-                /** Closes the connection after the client completes the stream. */
+                /** 客户端完成流之后关闭该连接。 */
                 @Override
                 public void onCompleted() {
                     connection.close();
@@ -325,7 +324,7 @@ public class NacosGrpcServer implements SmartLifecycle {
         }
     }
 
-    /** Tracks watches and registration state for one Nacos gRPC connection. */
+    /** 跟踪一个 Nacos gRPC 连接的监听和注册状态。 */
     private final class ClientConnection {
         private final SocketAddress remoteAddress;
         private final StreamObserver<Payload> observer;
@@ -333,7 +332,7 @@ public class NacosGrpcServer implements SmartLifecycle {
         private final AtomicBoolean closed = new AtomicBoolean();
         private final AtomicReference<NacosClientRegistration.Registration> registration = new AtomicReference<>();
         private volatile boolean attached;
-        /** Creates per-connection watch and registration state. */
+        /** 创建按连接的监听与注册状态。 */
 
         private ClientConnection(SocketAddress remoteAddress, StreamObserver<Payload> observer) {
             this.remoteAddress = remoteAddress;
@@ -345,7 +344,7 @@ public class NacosGrpcServer implements SmartLifecycle {
                 }
             }
         }
-        /** Registers the client and captures its connection metadata. */
+        /** 注册客户端并捕获其连接元数据。 */
 
         private void attach(ConnectionSetupRequest request) {
             if (closed.get() || attached) {
@@ -359,7 +358,7 @@ public class NacosGrpcServer implements SmartLifecycle {
                 created.close();
             }
         }
-        /** Reconciles active watches with the latest client listener batch. */
+        /** 按客户端最新一批监听请求对齐活跃监听。 */
 
         private void replaceWatches(List<NacosListenerEntry> entries, List<NacosConfigKey> immediatelyChanged) {
             if (closed.get()) {
@@ -384,7 +383,7 @@ public class NacosGrpcServer implements SmartLifecycle {
                 }
             });
         }
-        /** Pushes a configuration-change notification to the client. */
+        /** 向客户端推送配置变更通知。 */
 
         private void push(NacosConfigKey key) {
             if (closed.get()) {
@@ -403,7 +402,7 @@ public class NacosGrpcServer implements SmartLifecycle {
                 close();
             }
         }
-        /** Closes this resource and releases associated state. */
+        /** 关闭该资源并释放关联状态。 */
 
         private void close() {
             if (!closed.compareAndSet(false, true)) {
@@ -420,7 +419,7 @@ public class NacosGrpcServer implements SmartLifecycle {
             }
         }
     }
-    /** Extracts a printable host from a transport address. */
+    /** 从传输层地址提取可打印的主机。 */
 
     private static String remoteHost(SocketAddress address) {
         if (address instanceof InetSocketAddress inetAddress) {
@@ -429,9 +428,9 @@ public class NacosGrpcServer implements SmartLifecycle {
         return address == null ? "" : address.toString();
     }
 
-    /** Copies the transport peer address into the gRPC request context. */
+    /** 把传输层对端地址复制到 gRPC 请求上下文。 */
     private static final class RemoteAddressInterceptor implements ServerInterceptor {
-        /** Stores the transport peer address for downstream request handlers. */
+        /** 保存传输层对端地址，供下游请求处理器使用。 */
         @Override
         public <ReqT, RespT> ServerCall.Listener<ReqT> interceptCall(
                 ServerCall<ReqT, RespT> call,

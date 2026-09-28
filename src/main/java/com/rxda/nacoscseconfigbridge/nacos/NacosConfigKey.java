@@ -1,27 +1,27 @@
 package com.rxda.nacoscseconfigbridge.nacos;
 
 /**
- * Immutable Nacos configuration identity used throughout the bridge.
+ * 网桥各处使用的不可变 Nacos 配置标识。
  *
- * @param dataId Nacos configuration dataId
+ * @param dataId Nacos 配置 dataId
  * @param group Nacos group
- * @param tenant Nacos namespace or tenant
+ * @param tenant Nacos 命名空间或租户
  */
 public record NacosConfigKey(String dataId, String group, String tenant) {
 
     /**
-     * Returns the Nacos default group when the request omitted a group.
+     * 请求未指定 group 时返回 Nacos 默认 group。
      *
-     * @return effective group
+     * @return 有效 group
      */
     public String effectiveGroup() {
         return group == null || group.isBlank() ? "DEFAULT_GROUP" : group;
     }
 
     /**
-     * Returns the public tenant when the request omitted a tenant.
+     * 请求未指定 tenant 时返回公共租户。
      *
-     * @return effective tenant
+     * @return 有效 tenant
      */
     public String effectiveTenant() {
         return tenant == null || tenant.isBlank() ? "public" : tenant;

@@ -3,9 +3,8 @@ FROM eclipse-temurin:25-jre AS aot-training
 WORKDIR /app
 COPY ./target/srv-nacos-cse-config-bridge-0.1.0-SNAPSHOT.jar /app/app.jar
 
-# JDK 25 records the classes loaded during this short startup run and creates
-# a cache for the final image. The application only needs a syntactically valid
-# KIE address during training; no external service is contacted.
+# JDK 25 会记录这次短暂启动运行中加载的类，并为最终镜像生成缓存。
+# 训练期间应用只需要一个语法合法的 KIE 地址，不会连接任何外部服务。
 ENV JAVA_TOOL_OPTIONS="-XX:+UseCompactObjectHeaders -Xms32m -Xmx256m"
 ENV CSE_CONFIG_SERVER_ADDR="http://127.0.0.1:30110" \
     CSE_PROJECT="default" \
@@ -22,8 +21,8 @@ FROM eclipse-temurin:25-jre
 
 WORKDIR /app
 
-# JDK 25 compact object headers reduce per-object memory. The AOT cache is
-# generated from the exact application JAR and JDK base image above.
+# JDK 25 的压缩对象头可减少每个对象的内存占用。AOT 缓存
+# 由上面的应用 JAR 和 JDK 基础镜像精确生成。
 ENV JAVA_TOOL_OPTIONS="-XX:+UseCompactObjectHeaders -Xms32m -Xmx256m -XX:AOTMode=auto -XX:AOTCache=/app/app.aot"
 COPY --from=aot-training /app/app.jar /app/app.jar
 COPY --from=aot-training /app/app.aot /app/app.aot

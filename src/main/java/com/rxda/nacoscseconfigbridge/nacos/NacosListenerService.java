@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service;
 import com.rxda.nacoscseconfigbridge.cse.KieConfigStore;
 
 /**
- * Coordinates Nacos listener requests with exact KIE reads and shared long polls.
+ * 用精确 KIE 读取和共享长轮询协调 Nacos 监听请求。
  */
 @Service
 public class NacosListenerService {
@@ -33,17 +33,17 @@ public class NacosListenerService {
     private final ExecutorService listenerExecutor;
 
     /**
-     * One KIE long-poll is enough for a key, even when several Nacos clients
-     * listen for that key. Besides reducing KIE load, this also avoids one
-     * socket and one virtual task per client/key pair.
+     * 一个 key 只需要一次 KIE 长轮询，即使有多个 Nacos 客户端在监听它。
+     * 除了降低 KIE 负载，也避免了每个 client/key 对占用一个 socket
+     * 和一个虚拟任务。
      */
     private final Map<NacosConfigKey, SharedWatch> sharedWatches = new ConcurrentHashMap<>();
 
     /**
-     * Creates a listener service backed by the shared listener executor.
+     * 创建由共享监听线程池支撑的监听服务。
      *
-     * @param configStore exact KIE-backed configuration store
-     * @param listenerExecutor executor for checks and long polls
+     * @param configStore 精确的 KIE 配置存储
+     * @param listenerExecutor 检查和长轮询用的线程池
      */
     public NacosListenerService(
             KieConfigStore configStore,
@@ -53,10 +53,10 @@ public class NacosListenerService {
     }
 
     /**
-     * Blocks until one subscribed configuration changes or all polls finish.
+     * 阻塞等待，直到某个订阅的配置变更或所有轮询结束。
      *
-     * @param entries subscriptions supplied by a Nacos client
-     * @return keys whose content changed
+     * @param entries Nacos 客户端提交的订阅
+     * @return 内容变更的键
      */
     public List<NacosConfigKey> listen(List<NacosListenerEntry> entries) {
         if (entries.isEmpty()) {
@@ -71,9 +71,8 @@ public class NacosListenerService {
             for (int i = 0; i < entries.size(); i++) {
                 Optional<NacosConfigKey> result = completionService.take().get();
                 if (result.isPresent()) {
-                    // Nacos will refresh this key and submit the remaining
-                    // keys again. Returning now prevents an unrelated long
-                    // poll from delaying a real change notification.
+                    // Nacos 会刷新这个 key 并重新提交剩下的 key。
+                    // 直接返回可以避免一个无关的长轮询拖慢真实的变更通知。
                     return List.of(result.get());
                 }
             }
@@ -91,10 +90,10 @@ public class NacosListenerService {
     }
 
     /**
-     * Performs immediate, non-blocking checks for a batch of subscriptions.
+     * 对一批订阅做立即的、非阻塞的检查。
      *
-     * @param entries subscriptions supplied by a Nacos client
-     * @return keys that already differ from the client MD5 values
+     * @param entries Nacos 客户端提交的订阅
+     * @return 已与客户端 MD5 不同的键
      */
     public List<NacosConfigKey> checkNow(List<NacosListenerEntry> entries) {
         if (entries.isEmpty()) {
@@ -124,11 +123,11 @@ public class NacosListenerService {
     }
 
     /**
-     * Adds a callback to the shared long poll for a configuration key.
+     * 把一个回调加到某配置 key 的共享长轮询上。
      *
-     * @param entry subscription and baseline MD5
-     * @param onChange callback invoked after a confirmed content change
-     * @return handle that removes this subscription
+     * @param entry 订阅和基线 MD5
+     * @param onChange 内容变更确认后调用的回调
+     * @return 移除该订阅的句柄
      */
     public Watch startWatch(NacosListenerEntry entry, Consumer<NacosConfigKey> onChange) {
         Objects.requireNonNull(entry, "entry");
@@ -150,37 +149,37 @@ public class NacosListenerService {
     }
 
     /**
-     * Returns the number of unique active KIE long polls.
+     * 返回唯一活跃 KIE 长轮询的数量。
      *
-     * @return active shared-watch count
+     * @return 活跃共享监听数
      */
     public int activeWatchCount() {
         return sharedWatches.size();
     }
 
     /**
-     * Returns the number of Nacos subscriptions attached to shared watches.
+     * 返回挂在共享监听上的 Nacos 订阅数。
      *
-     * @return active subscription count
+     * @return 活跃订阅数
      */
     public int activeWatchSubscriberCount() {
         return sharedWatches.values().stream().mapToInt(SharedWatch::subscriberCount).sum();
     }
     /**
-     * Checks one subscription without waiting for a KIE revision.
+     * 检查一个订阅，不等待 KIE 版本变化。
      *
-     * @param entry subscription and expected MD5
-     * @return key when its content differs from the expected MD5
+     * @param entry 订阅和期望的 MD5
+     * @return 内容与期望 MD5 不同时返回该 key
      */
     private Optional<NacosConfigKey> checkNow(NacosListenerEntry entry) {
         KieConfigStore.ReadResult current = configStore.read(entry.key(), null, false);
         return isChanged(entry, current) ? Optional.of(entry.key()) : Optional.empty();
     }
     /**
-     * Performs one immediate check followed by a KIE long poll when necessary.
+     * 先做一次立即检查，必要时再发起 KIE 长轮询。
      *
-     * @param entry subscription and expected MD5
-     * @return key when its content changes
+     * @param entry 订阅和期望的 MD5
+     * @return 内容变更时返回该 key
      */
     private Optional<NacosConfigKey> waitForChange(NacosListenerEntry entry) {
         KieConfigStore.ReadResult current = configStore.read(entry.key(), null, false);
@@ -192,40 +191,40 @@ public class NacosListenerService {
         return isChanged(entry, waited) ? Optional.of(entry.key()) : Optional.empty();
     }
     /**
-     * Compares a read result with the MD5 supplied by a Nacos client.
+     * 把读取结果与 Nacos 客户端提供的 MD5 对比。
      *
-     * @param entry subscription containing the expected MD5
-     * @param result current KIE read result
-     * @return whether the content changed
+     * @param entry 包含期望 MD5 的订阅
+     * @param result 当前 KIE 读取结果
+     * @return 内容是否变更
      */
     private boolean isChanged(NacosListenerEntry entry, KieConfigStore.ReadResult result) {
         return isChanged(entry.md5(), result);
     }
     /**
-     * Compares a read result with a previously observed content MD5.
+     * 把读取结果与之前观察到的内容 MD5 对比。
      *
-     * @param expectedMd5 previously observed MD5
-     * @param result current KIE read result
-     * @return whether the content changed
+     * @param expectedMd5 之前观察到的 MD5
+     * @param result 当前 KIE 读取结果
+     * @return 内容是否变更
      */
     private boolean isChanged(String expectedMd5, KieConfigStore.ReadResult result) {
-        // KIE answers a quiet long poll with 304 and no document body. That is
-        // not a deleted Nacos config. Only a successful response can establish
-        // the missing-config state; otherwise every polling timeout would push
-        // a false change and @NacosValue would refresh continuously.
+        // KIE 对无变化的长轮询返回 304 且没有文档体。
+        // 这不代表 Nacos 配置被删了。只有成功的响应才能确定
+        // "配置缺失" 状态，否则每次轮询超时都会推送一次虚假变更，
+        // @NacosValue 会不断刷新。
         if (!result.changed() && result.content().isEmpty()) {
             return false;
         }
         return result.content()
                 .map(content -> !Objects.equals(expectedMd5, configStore.md5(content)))
-                // An empty md5 is Nacos' representation of a key that is not
-                // present. It must not produce a hot loop for missing configs.
+                // 空 md5 是 Nacos 对"键不存在"的表示。
+                // 缺失配置不能进入热循环。
                 .orElseGet(() -> expectedMd5 != null && !expectedMd5.isBlank());
     }
     /**
-     * Removes an unused shared watch and stops its long-poll task.
+     * 移除不再使用的共享监听，并停止它的长轮询任务。
      *
-     * @param watch shared watch to remove
+     * @param watch 要移除的共享监听
      */
     private void remove(SharedWatch watch) {
         synchronized (sharedWatches) {
@@ -235,7 +234,7 @@ public class NacosListenerService {
         }
     }
 
-    /** Owns one KIE long poll shared by all Nacos subscribers for a key. */
+    /** 为一个 key 拥有一个 KIE 长轮询，供所有 Nacos 订阅者共享。 */
     private final class SharedWatch {
         private final NacosConfigKey key;
         private final java.util.Set<Consumer<NacosConfigKey>> subscribers =
@@ -244,37 +243,37 @@ public class NacosListenerService {
         private volatile Future<?> future;
         private volatile String expectedMd5 = "";
         /**
-         * Creates a shared watch with the client's current MD5 baseline.
+         * 创建共享监听，以客户端当前 MD5 为基线。
          *
-         * @param entry initial subscription
+         * @param entry 初始订阅
          */
         private SharedWatch(NacosListenerEntry entry) {
             this.key = entry.key();
             this.expectedMd5 = entry.md5();
         }
-        /** Starts the asynchronous long-poll task. */
+        /** 启动异步长轮询任务。 */
         private void start() {
             future = listenerExecutor.submit(this::run);
         }
         /**
-         * Adds one subscriber to this shared watch.
+         * 给该共享监听添加一个订阅者。
          *
-         * @param onChange callback invoked when content changes
-         * @return subscription handle
+         * @param onChange 内容变更时调用的回调
+         * @return 订阅句柄
          */
         private Subscription subscribe(Consumer<NacosConfigKey> onChange) {
             subscribers.add(onChange);
             return new Subscription(this, onChange);
         }
         /**
-         * Returns the number of active subscribers.
+         * 返回活跃订阅者数量。
          *
-         * @return subscriber count
+         * @return 订阅者数
          */
         private int subscriberCount() {
             return subscribers.size();
         }
-        /** Cancels the asynchronous long-poll task. */
+        /** 取消异步长轮询任务。 */
         private void stop() {
             if (active.compareAndSet(true, false)) {
                 Future<?> current = future;
@@ -283,17 +282,16 @@ public class NacosListenerService {
                 }
             }
         }
-        /** Runs the long-poll loop until the watch is closed. */
+        /** 运行长轮询循环，直到监听被关闭。 */
         private void run() {
             KieConfigStore.ReadResult current = null;
             while (active.get()) {
                 try {
                     if (current == null) {
                         current = configStore.read(key, null, false);
-                        // A client that supplied an old md5 must receive the
-                        // change immediately; checkNow normally catches this,
-                        // but preserving the baseline here closes the race
-                        // between the initial check and watch registration.
+                        // 客户端如果传了旧 md5，必须立即收到变更；
+                        // 正常情况下 checkNow 已经处理了，但在这里保留基线
+                        // 可以关闭"初始检查"和"监听注册"之间的竞态窗口。
                         if (isChanged(expectedMd5, current)) {
                             notifySubscribers();
                         }
@@ -326,15 +324,15 @@ public class NacosListenerService {
             }
         }
         /**
-         * Computes the MD5 of the current raw configuration, if present.
+         * 计算当前原始配置的 MD5（如果存在）。
          *
-         * @param result KIE read result
-         * @return content MD5, or an empty string for a missing key
+         * @param result KIE 读取结果
+         * @return 内容 MD5，key 不存在时返回空字符串
          */
         private String contentMd5(KieConfigStore.ReadResult result) {
             return result.content().map(configStore::md5).orElse("");
         }
-        /** Notifies all subscribers after a confirmed content change. */
+        /** 内容变更确认后通知所有订阅者。 */
         private void notifySubscribers() {
             for (Consumer<NacosConfigKey> subscriber : subscribers) {
                 try {
@@ -348,23 +346,23 @@ public class NacosListenerService {
         }
     }
 
-    /** Removes one callback from a shared watch when closed. */
+    /** 关闭时从共享监听移除一个回调。 */
     private final class Subscription implements Watch {
         private final SharedWatch shared;
         private final Consumer<NacosConfigKey> callback;
         private final AtomicBoolean closed = new AtomicBoolean();
         /**
-         * Creates a handle for one callback on a shared watch.
+         * 为共享监听上的一个回调创建句柄。
          *
-         * @param shared shared watch owning the callback
-         * @param callback callback to remove when closed
+         * @param shared 拥有该回调的共享监听
+         * @param callback 关闭时移除的回调
          */
         private Subscription(SharedWatch shared, Consumer<NacosConfigKey> callback) {
             this.shared = shared;
             this.callback = callback;
         }
 
-        /** Closes this resource and releases associated state. */
+        /** 关闭该资源并释放关联状态。 */
         @Override
         public void close() {
             if (closed.compareAndSet(false, true)) {
@@ -374,11 +372,11 @@ public class NacosListenerService {
         }
     }
 
-    /** Handle returned to a gRPC connection for cancelling a watch subscription. */
+    /** 返回给 gRPC 连接的句柄，用于取消监听订阅。 */
     @FunctionalInterface
     public interface Watch extends AutoCloseable {
         /**
-         * Cancels this subscription and releases its shared-watch reference.
+         * 取消该订阅并释放它对共享监听的引用。
          */
         @Override
         void close();

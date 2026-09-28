@@ -31,7 +31,7 @@ import org.springframework.util.StringUtils;
 import com.google.common.eventbus.EventBus;
 
 /**
- * Creates KIE clients and exposes the raw HTTP query needed to preserve Nacos documents.
+ * 创建 KIE 客户端，并提供保留 Nacos 文档所需的原始 HTTP 查询。
  */
 @Component
 public class KieClientFactory {
@@ -42,10 +42,10 @@ public class KieClientFactory {
     private final List<AuthHeaderProvider> authHeaderProviders;
 
     /**
-     * Builds the shared KIE transport and address manager.
+     * 构建共享的 KIE 传输层和地址管理器。
      *
-     * @param properties KIE endpoint and timeout settings
-     * @param authHeaderProviders providers contributing authentication headers
+     * @param properties KIE 端点和超时设置
+     * @param authHeaderProviders 提供认证头的提供者
      */
     public KieClientFactory(KieProperties properties, List<AuthHeaderProvider> authHeaderProviders) {
         this.properties = properties;
@@ -81,10 +81,10 @@ public class KieClientFactory {
     }
 
     /**
-     * Creates a KIE client configured for either an immediate or long-polling request.
+     * 创建配置为即时请求或长轮询请求的 KIE 客户端。
      *
-     * @param longPolling whether the client should wait for a KIE revision change
-     * @return configured KIE client
+     * @param longPolling 客户端是否应等待 KIE 版本变更
+     * @return 配置好的 KIE 客户端
      */
     public KieClient create(boolean longPolling) {
         KieConfiguration configuration = new KieConfiguration()
@@ -95,12 +95,12 @@ public class KieClientFactory {
     }
 
     /**
-     * Queries KIE without converting typed values into Java maps.
+     * 查询 KIE，不将类型化值转换为 Java Map。
      *
-     * @param labelsQuery encoded KIE label predicates
-     * @param revision previously observed KIE revision
-     * @param longPolling whether the request should wait for a change
-     * @return raw KIE response
+     * @param labelsQuery 编码后的 KIE 标签谓词
+     * @param revision 之前观察到的 KIE 版本
+     * @param longPolling 请求是否应等待变更
+     * @return 原始 KIE 响应
      */
     public RawQuery queryRaw(String labelsQuery, String revision, boolean longPolling) {
         String effectiveRevision = revision == null || revision.isBlank() ? "-1" : revision;
@@ -117,9 +117,8 @@ public class KieClientFactory {
             HttpResponse response = httpTransport.doRequest(new HttpRequest(url.toString(), null, null, HttpRequest.GET));
             if (response.getStatusCode() == HttpStatus.SC_NOT_MODIFIED
                     || response.getStatusCode() == HttpStatus.SC_TOO_MANY_REQUESTS) {
-                // KIE does not repeat the revision header for a 304. Keep the
-                // caller's revision so a watch does not fall back to a full
-                // query after every quiet polling interval.
+                // KIE 在 304 响应中不会重复版本头。保留调用方的版本，
+                // 避免监听在每次静默轮询间隔后回退到全量查询。
                 return new RawQuery(false, effectiveRevision, List.of());
             }
             if (response.getStatusCode() != HttpStatus.SC_OK) {
@@ -138,7 +137,7 @@ public class KieClientFactory {
         }
     }
 
-    /** Returns the currently selected KIE server address. */
+    /** 返回当前选中的 KIE 服务地址。 */
     public String address() {
         return addressManager.address();
     }
@@ -154,15 +153,15 @@ public class KieClientFactory {
         return properties.getApp();
     }
 
-    /** Returns the configured CSE project. */
+    /** 返回配置的 CSE 项目。 */
     public String project() {
         return properties.getProject();
     }
 
     /**
-     * Collects authentication headers for direct KIE HTTP requests.
+     * 收集直接 KIE HTTP 请求所需的认证头。
      *
-     * @return immutable authentication header map
+     * @return 不可变的认证头映射
      */
     public Map<String, String> authHeaders() {
         Map<String, String> headers = new HashMap<>();
@@ -170,25 +169,25 @@ public class KieClientFactory {
         return Collections.unmodifiableMap(headers);
     }
     /**
-     * Encodes a value for use as a path segment.
+     * 将值编码为路径片段使用。
      *
-     * @param value value to encode
-     * @return encoded path segment
+     * @param value 待编码的值
+     * @return 编码后的路径片段
      */
     private static String encodePathSegment(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
     }
     /**
-     * Encodes a value for use as a query parameter.
+     * 将值编码为查询参数使用。
      *
-     * @param value value to encode
-     * @return encoded query value
+     * @param value 待编码的值
+     * @return 编码后的查询参数值
      */
     private static String encodeQueryValue(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
-    /** Result of a raw KIE query, including the revision used by long polling. */
+    /** 原始 KIE 查询的结果，包含长轮询使用的版本。 */
     public record RawQuery(boolean changed, String revision, List<KVDoc> documents) {
     }
 }

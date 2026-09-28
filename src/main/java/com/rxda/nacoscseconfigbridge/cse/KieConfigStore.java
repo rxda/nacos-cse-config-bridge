@@ -17,10 +17,9 @@ import com.rxda.nacoscseconfigbridge.config.KieClientFactory;
 import com.rxda.nacoscseconfigbridge.nacos.NacosConfigKey;
 
 /**
- * Reads raw, one-to-one Nacos configuration documents from CSE KIE.
+ * 从 CSE KIE 读取原始的一对一 Nacos 配置文档。
  *
- * <p>The store deliberately preserves the original text and does not invoke KIE
- * format conversion or hierarchical fallback resolution.</p>
+ * <p>该存储刻意保留原始文本，不调用 KIE 格式转换，也不做层级回退解析。</p>
  */
 
 @Service
@@ -29,16 +28,16 @@ public class KieConfigStore {
     private final KieClientFactory clientFactory;
 
     /**
-     * Creates a test-only store without a KIE client.
+     * 创建仅用于测试、无 KIE 客户端的存储。
      */
     public KieConfigStore() {
         this.clientFactory = null;
     }
 
     /**
-     * Creates a production store backed by the configured KIE client factory.
+     * 创建由配置的 KIE 客户端工厂支撑的生产存储。
      *
-     * @param clientFactory KIE transport and identity factory
+     * @param clientFactory KIE 传输层与身份工厂
      */
     @Autowired
     public KieConfigStore(KieClientFactory clientFactory) {
@@ -46,12 +45,12 @@ public class KieConfigStore {
     }
 
     /**
-     * Reads one exact Nacos configuration identity from KIE.
+     * 从 KIE 精确读取一个 Nacos 配置标识。
      *
-     * @param key Nacos dataId, group, and tenant identity
-     * @param revision KIE revision used for conditional polling
-     * @param longPolling whether KIE should hold the request until a change
-     * @return raw content and revision metadata
+     * @param key Nacos dataId、group 和 tenant 标识
+     * @param revision 用于条件轮询的 KIE 版本
+     * @param longPolling KIE 是否应挂起请求直到有变更
+     * @return 原始内容和版本元数据
      */
     public ReadResult read(NacosConfigKey key, String revision, boolean longPolling) {
         KieClientFactory.RawQuery response = clientFactory.queryRaw(
@@ -74,10 +73,10 @@ public class KieConfigStore {
     }
 
     /**
-     * Calculates the MD5 used by the Nacos listener protocol.
+     * 计算 Nacos 监听协议使用的 MD5。
      *
-     * @param content configuration text
-     * @return lowercase hexadecimal MD5 digest
+     * @param content 配置文本
+     * @return 小写十六进制 MD5 摘要
      */
     public String md5(String content) {
         try {
@@ -93,10 +92,10 @@ public class KieConfigStore {
         }
     }
     /**
-     * Builds the exact KIE label query for a Nacos configuration identity.
+     * 为 Nacos 配置标识构建精确的 KIE 标签查询。
      *
-     * @param key Nacos configuration identity
-     * @return encoded KIE label predicates
+     * @param key Nacos 配置标识
+     * @return 编码后的 KIE 标签谓词
      */
     private String labels(NacosConfigKey key) {
         return identityLabels(key).entrySet().stream()
@@ -105,10 +104,10 @@ public class KieConfigStore {
                 .orElseThrow();
     }
     /**
-     * Returns the labels used to isolate one Nacos configuration document.
+     * 返回用于隔离单个 Nacos 配置文档的标签。
      *
-     * @param key Nacos configuration identity
-     * @return exact KIE label set
+     * @param key Nacos 配置标识
+     * @return 精确的 KIE 标签集合
      */
     private Map<String, String> identityLabels(NacosConfigKey key) {
         Map<String, String> labels = new LinkedHashMap<>();
@@ -123,34 +122,34 @@ public class KieConfigStore {
         return labels;
     }
     /**
-     * URL-encodes one KIE label expression.
+     * 对一个 KIE 标签表达式做 URL 编码。
      *
-     * @param value value to encode
-     * @return encoded value
+     * @param value 待编码的值
+     * @return 编码后的值
      */
     private String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
     /**
-     * Determines whether a KIE document is eligible for reads.
+     * 判断 KIE 文档是否可被读取。
      *
-     * @param document KIE document
-     * @return {@code true} when the document is enabled or has no status
+     * @param document KIE 文档
+     * @return 文档已启用或无状态时返回 {@code true}
      */
     private boolean isEnabled(KVDoc document) {
         return document.getStatus() == null || "enabled".equalsIgnoreCase(document.getStatus());
     }
 
     /**
-     * Result of an exact KIE read, including polling and original format metadata.
+     * 精确 KIE 读取的结果，包含轮询和原始格式元数据。
      */
     public record ReadResult(boolean changed, String revision, Optional<String> content, String valueType) {
         /**
-         * Creates a read result without value-type metadata.
+         * 创建不带值类型元数据的读取结果。
          *
-         * @param changed whether the KIE query observed a revision change
-         * @param revision KIE revision returned by the query
-         * @param content raw configuration content, when present
+         * @param changed KIE 查询是否观察到版本变更
+         * @param revision 查询返回的 KIE 版本
+         * @param content 原始配置内容（如果存在）
          */
         public ReadResult(boolean changed, String revision, Optional<String> content) {
             this(changed, revision, content, null);

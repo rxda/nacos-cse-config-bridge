@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /**
- * Parses and serializes Nacos HTTP listener payloads.
+ * 解析和序列化 Nacos HTTP 监听载荷。
  */
 
 @Component
@@ -18,10 +18,10 @@ public class NacosListenerParser {
     private static final String FIELD_SEPARATOR = "\u0002";
 
     /**
-     * Parses the Nacos record- and field-separated listener format.
+     * 解析 Nacos 记录/字段分隔的监听格式。
      *
-     * @param value raw request body or header value
-     * @return parsed listener entries
+     * @param value 原始请求体或请求头值
+     * @return 解析后的监听条目
      */
     public List<NacosListenerEntry> parse(String value) {
         if (!StringUtils.hasText(value)) {
@@ -35,10 +35,10 @@ public class NacosListenerParser {
     }
 
     /**
-     * Parses one record from the Nacos listener payload.
+     * 解析 Nacos 监听载荷中的一条记录。
      *
-     * @param record record containing dataId, group, tenant, and MD5
-     * @return parsed listener entry
+     * @param record 包含 dataId、group、tenant 和 MD5 的记录
+     * @return 解析后的监听条目
      */
     private NacosListenerEntry parseRecord(String record) {
         String[] fields = record.split(FIELD_SEPARATOR, -1);
@@ -50,10 +50,10 @@ public class NacosListenerParser {
     }
 
     /**
-     * Serializes changed keys into Nacos listener response syntax.
+     * 把变更的键序列化为 Nacos 监听响应语法。
      *
-     * @param changed keys whose content changed
-     * @return Nacos response payload
+     * @param changed 内容变更的键
+     * @return Nacos 响应载荷
      */
     public String response(List<NacosConfigKey> changed) {
         return changed.stream()

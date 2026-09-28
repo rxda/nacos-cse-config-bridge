@@ -3,12 +3,12 @@ package com.rxda.nacoscseconfigbridge.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Settings controlling optional registration of Nacos clients in CSE Service Center.
+ * 控制是否将 Nacos 客户端可选注册到 CSE 服务中心的设置。
  */
 @ConfigurationProperties(prefix = "srv-nacos-cse-config-bridge.service-center")
 public class ServiceCenterProperties {
 
-    /** Registration is attempted only when this flag and a server address are set. */
+    /** 仅当该开关和服务地址都设置后才尝试注册。 */
     private boolean enabled;
     private String serverAddr;
     private String project = "default";
@@ -23,332 +23,332 @@ public class ServiceCenterProperties {
     private String hostLabel = "serviceHost";
     private String portLabel = "servicePort";
     private String protocolLabel = "serviceProtocol";
-    /** Optional fallback business port when a Nacos client does not send servicePort. */
+    /** 可选的业务端口回退值，当 Nacos 客户端未发送 servicePort 时使用。 */
     private int instancePort;
-    /** Optional fallback business host; blank means use the gRPC peer address. */
+    /** 可选的业务主机回退值；为空时使用 gRPC 对端地址。 */
     private String instanceHost;
     private String defaultServiceName;
     private boolean sslEnabled;
 
     /**
-     * Returns whether Service Center registration is enabled.
+     * 返回是否启用服务中心注册。
      *
-     * @return {@code true} when registration is enabled
+     * @return 启用注册时返回 {@code true}
      */
     public boolean isEnabled() {
         return enabled;
     }
 
     /**
-     * Enables or disables Service Center registration.
+     * 启用或禁用服务中心注册。
      *
-     * @param enabled whether registration is enabled
+     * @param enabled 是否启用注册
      */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
 
     /**
-     * Returns the comma-separated Service Center addresses.
+     * 返回逗号分隔的服务中心地址。
      *
-     * @return Service Center addresses
+     * @return 服务中心地址
      */
     public String getServerAddr() {
         return serverAddr;
     }
 
     /**
-     * Sets the comma-separated Service Center addresses.
+     * 设置逗号分隔的服务中心地址。
      *
-     * @param serverAddr Service Center addresses
+     * @param serverAddr 服务中心地址
      */
     public void setServerAddr(String serverAddr) {
         this.serverAddr = serverAddr;
     }
 
     /**
-     * Returns the CSE project.
+     * 返回 CSE 项目。
      *
-     * @return CSE project name
+     * @return CSE 项目名
      */
     public String getProject() {
         return project;
     }
 
     /**
-     * Sets the CSE project.
+     * 设置 CSE 项目。
      *
-     * @param project CSE project name
+     * @param project CSE 项目名
      */
     public void setProject(String project) {
         this.project = project;
     }
 
     /**
-     * Returns the Service Center tenant.
+     * 返回服务中心租户。
      *
-     * @return tenant name
+     * @return 租户名
      */
     public String getTenantName() {
         return tenantName;
     }
 
     /**
-     * Sets the Service Center tenant.
+     * 设置服务中心租户。
      *
-     * @param tenantName tenant name
+     * @param tenantName 租户名
      */
     public void setTenantName(String tenantName) {
         this.tenantName = tenantName;
     }
 
     /**
-     * Returns the CSE application identifier.
+     * 返回 CSE 应用标识。
      *
-     * @return application identifier
+     * @return 应用标识
      */
     public String getAppId() {
         return appId;
     }
 
     /**
-     * Sets the CSE application identifier.
+     * 设置 CSE 应用标识。
      *
-     * @param appId application identifier
+     * @param appId 应用标识
      */
     public void setAppId(String appId) {
         this.appId = appId;
     }
 
     /**
-     * Returns the fallback CSE environment.
+     * 返回回退的 CSE 环境。
      *
-     * @return environment name
+     * @return 环境名
      */
     public String getEnvironment() {
         return environment;
     }
 
     /**
-     * Sets the fallback CSE environment.
+     * 设置回退的 CSE 环境。
      *
-     * @param environment environment name
+     * @param environment 环境名
      */
     public void setEnvironment(String environment) {
         this.environment = environment;
     }
 
     /**
-     * Returns the microservice version advertised to Service Center.
+     * 返回上报给服务中心的微服务版本。
      *
-     * @return service version
+     * @return 服务版本
      */
     public String getVersion() {
         return version;
     }
 
     /**
-     * Sets the microservice version advertised to Service Center.
+     * 设置上报给服务中心的微服务版本。
      *
-     * @param version service version
+     * @param version 服务版本
      */
     public void setVersion(String version) {
         this.version = version;
     }
 
     /**
-     * Returns the instance heartbeat interval.
+     * 返回实例心跳间隔。
      *
-     * @return heartbeat interval in seconds
+     * @return 心跳间隔（秒）
      */
     public long getHeartbeatIntervalSeconds() {
         return heartbeatIntervalSeconds;
     }
 
     /**
-     * Sets the instance heartbeat interval.
+     * 设置实例心跳间隔。
      *
-     * @param heartbeatIntervalSeconds heartbeat interval in seconds
+     * @param heartbeatIntervalSeconds 心跳间隔（秒）
      */
     public void setHeartbeatIntervalSeconds(long heartbeatIntervalSeconds) {
         this.heartbeatIntervalSeconds = heartbeatIntervalSeconds;
     }
 
     /**
-     * Returns whether business instances should be registered.
+     * 返回是否应注册业务实例。
      *
-     * @return {@code true} when instance registration is enabled
+     * @return 启用实例注册时返回 {@code true}
      */
     public boolean isInstanceEnabled() {
         return instanceEnabled;
     }
 
     /**
-     * Enables or disables business instance registration.
+     * 启用或禁用业务实例注册。
      *
-     * @param instanceEnabled whether instance registration is enabled
+     * @param instanceEnabled 是否启用实例注册
      */
     public void setInstanceEnabled(boolean instanceEnabled) {
         this.instanceEnabled = instanceEnabled;
     }
 
     /**
-     * Returns the label containing the Nacos application or service name.
+     * 返回包含 Nacos 应用或服务名的标签。
      *
-     * @return service-name label
+     * @return 服务名标签
      */
     public String getServiceNameLabel() {
         return serviceNameLabel;
     }
 
     /**
-     * Sets the label containing the Nacos application or service name.
+     * 设置包含 Nacos 应用或服务名的标签。
      *
-     * @param serviceNameLabel service-name label
+     * @param serviceNameLabel 服务名标签
      */
     public void setServiceNameLabel(String serviceNameLabel) {
         this.serviceNameLabel = serviceNameLabel;
     }
 
     /**
-     * Returns the label containing a complete endpoint URI.
+     * 返回包含完整端点 URI 的标签。
      *
-     * @return endpoint label, or blank when separate host and port labels are used
+     * @return 端点标签；使用独立主机和端口标签时为空
      */
     public String getEndpointLabel() {
         return endpointLabel;
     }
 
     /**
-     * Sets the label containing a complete endpoint URI.
+     * 设置包含完整端点 URI 的标签。
      *
-     * @param endpointLabel endpoint label
+     * @param endpointLabel 端点标签
      */
     public void setEndpointLabel(String endpointLabel) {
         this.endpointLabel = endpointLabel;
     }
 
     /**
-     * Returns the label containing the business host.
+     * 返回包含业务主机的标签。
      *
-     * @return host label
+     * @return 主机标签
      */
     public String getHostLabel() {
         return hostLabel;
     }
 
     /**
-     * Sets the label containing the business host.
+     * 设置包含业务主机的标签。
      *
-     * @param hostLabel host label
+     * @param hostLabel 主机标签
      */
     public void setHostLabel(String hostLabel) {
         this.hostLabel = hostLabel;
     }
 
     /**
-     * Returns the label containing the business port.
+     * 返回包含业务端口的标签。
      *
-     * @return port label
+     * @return 端口标签
      */
     public String getPortLabel() {
         return portLabel;
     }
 
     /**
-     * Sets the label containing the business port.
+     * 设置包含业务端口的标签。
      *
-     * @param portLabel port label
+     * @param portLabel 端口标签
      */
     public void setPortLabel(String portLabel) {
         this.portLabel = portLabel;
     }
 
     /**
-     * Returns the label containing the endpoint protocol.
+     * 返回包含端点协议的标签。
      *
-     * @return protocol label
+     * @return 协议标签
      */
     public String getProtocolLabel() {
         return protocolLabel;
     }
 
     /**
-     * Sets the label containing the endpoint protocol.
+     * 设置包含端点协议的标签。
      *
-     * @param protocolLabel protocol label
+     * @param protocolLabel 协议标签
      */
     public void setProtocolLabel(String protocolLabel) {
         this.protocolLabel = protocolLabel;
     }
 
     /**
-     * Returns the fallback business port.
+     * 返回回退的业务端口。
      *
-     * @return fallback port, or zero when unset
+     * @return 回退端口，未设置时为 0
      */
     public int getInstancePort() {
         return instancePort;
     }
 
     /**
-     * Sets the fallback business port.
+     * 设置回退的业务端口。
      *
-     * @param instancePort fallback port
+     * @param instancePort 回退端口
      */
     public void setInstancePort(int instancePort) {
         this.instancePort = instancePort;
     }
 
     /**
-     * Returns the fallback business host.
+     * 返回回退的业务主机。
      *
-     * @return fallback host
+     * @return 回退主机
      */
     public String getInstanceHost() {
         return instanceHost;
     }
 
     /**
-     * Sets the fallback business host.
+     * 设置回退的业务主机。
      *
-     * @param instanceHost fallback host
+     * @param instanceHost 回退主机
      */
     public void setInstanceHost(String instanceHost) {
         this.instanceHost = instanceHost;
     }
 
     /**
-     * Returns the fallback service name.
+     * 返回回退的服务名。
      *
-     * @return fallback service name
+     * @return 回退服务名
      */
     public String getDefaultServiceName() {
         return defaultServiceName;
     }
 
     /**
-     * Sets the fallback service name.
+     * 设置回退的服务名。
      *
-     * @param defaultServiceName fallback service name
+     * @param defaultServiceName 回退服务名
      */
     public void setDefaultServiceName(String defaultServiceName) {
         this.defaultServiceName = defaultServiceName;
     }
 
     /**
-     * Returns whether TLS is enabled for Service Center.
+     * 返回服务中心是否启用 TLS。
      *
-     * @return {@code true} when TLS is enabled
+     * @return 启用 TLS 时返回 {@code true}
      */
     public boolean isSslEnabled() {
         return sslEnabled;
     }
 
     /**
-     * Enables or disables TLS for Service Center.
+     * 启用或禁用服务中心的 TLS。
      *
-     * @param sslEnabled whether TLS is enabled
+     * @param sslEnabled 是否启用 TLS
      */
     public void setSslEnabled(boolean sslEnabled) {
         this.sslEnabled = sslEnabled;

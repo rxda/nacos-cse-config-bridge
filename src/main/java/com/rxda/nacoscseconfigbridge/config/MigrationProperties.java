@@ -3,27 +3,27 @@ package com.rxda.nacoscseconfigbridge.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Feature switch for the Nacos-to-KIE migration endpoint.
+ * Nacos 到 KIE 迁移端点的功能开关。
  */
 @ConfigurationProperties(prefix = "srv-nacos-cse-config-bridge.migration")
 public class MigrationProperties {
 
-    /** Migration is disabled by default because the endpoint writes to CSE. */
+    /** 迁移默认关闭，因为该端点会写入 CSE。 */
     private boolean enabled;
 
     /**
-     * Returns whether migration requests are accepted.
+     * 返回是否接受迁移请求。
      *
-     * @return {@code true} when migration is enabled
+     * @return 启用迁移时返回 {@code true}
      */
     public boolean isEnabled() {
         return enabled;
     }
 
     /**
-     * Enables or disables the migration endpoint.
+     * 启用或禁用迁移端点。
      *
-     * @param enabled whether migration is enabled
+     * @param enabled 是否启用迁移
      */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;

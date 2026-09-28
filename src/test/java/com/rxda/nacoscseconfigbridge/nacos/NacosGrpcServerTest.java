@@ -176,8 +176,8 @@ class NacosGrpcServerTest {
                 }
             });
 
-            // ConfigBatchListen must return immediately and install a background
-            // KIE watch. If either step regresses, this latch never opens.
+            // ConfigBatchListen 必须立即返回并在后台安装一个
+            // KIE 监听。任一步骤回归，这个锁存器就永远打不开了。
             assertThat(longPollStarted.await(3, TimeUnit.SECONDS)).isTrue();
 
             updateContent("feature.enabled: false\n");

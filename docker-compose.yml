@@ -11,11 +11,11 @@ services:
       NACOS_AUTH_IDENTITY_KEY: srv-nacos-cse-config-bridge-local
       NACOS_AUTH_IDENTITY_VALUE: srv-nacos-cse-config-bridge-local
     ports:
-      # Nacos HTTP API/UI. This is only the standalone Nacos server itself;
-      # application services should use srv-nacos-cse-config-bridge:8080 instead.
+      # Nacos HTTP API/UI。这里只是单机版 Nacos 服务端本身；
+      # 应用服务应使用 srv-nacos-cse-config-bridge:8080。
       - "8848:8848"
-      # Nacos 2.x Config client gRPC (8848 + 1000). Needed by the comparison
-      # test when it reads directly from the source Nacos server.
+      # Nacos 2.x Config 客户端 gRPC（8848 + 1000）。对比测试
+      # 直接从源 Nacos 服务端读取时需要它。
       - "9848:9848"
     volumes:
       - nacos-data:/home/nacos/data
@@ -26,7 +26,7 @@ services:
     container_name: cse
     restart: unless-stopped
     ports:
-      # Service Center, CSE dashboard and KIE Config Center.
+      # Service Center、CSE 控制台和 KIE 配置中心。
       - "30100:30100"
       - "30103:30103"
       - "30110:30110"
@@ -41,19 +41,19 @@ services:
     restart: unless-stopped
     depends_on:
       - cse
-    # The bridge is intentionally bounded; without a cgroup limit the JVM
-    # derives a multi-gigabyte max heap from the host instead of the service
-    #'s actual needs. Override BRIDGE_MEMORY_LIMIT for larger deployments.
+    # 网桥的资源有意设了上限；没有 cgroup 限制时，JVM 会按宿主机
+    # 推导数 GB 的最大堆，而不是按服务的实际需求。
+    # 大规模部署时用 BRIDGE_MEMORY_LIMIT 覆盖。
     mem_limit: ${BRIDGE_MEMORY_LIMIT:-384m}
     environment:
       SERVER_PORT: 8080
       JAVA_TOOL_OPTIONS: "${JAVA_TOOL_OPTIONS:--XX:+UseCompactObjectHeaders -Xms32m -Xmx256m -XX:AOTMode=auto -XX:AOTCache=/app/app.aot}"
-      # KIE API is exposed by the CSE container on its internal network.
+      # KIE API 由 CSE 容器在其内部网络上暴露。
       CSE_CONFIG_SERVER_ADDR: http://cse:30110
       CSE_PROJECT: ${CSE_PROJECT:-default}
       CSE_CONFIG_APP: ${CSE_CONFIG_APP:-nacos-config-bridge}
-      # The bundled Compose environment owns a local Service Center, so panel
-      # registration is enabled by default. Set to false to disable it.
+      # 打包的 Compose 环境自带本地服务中心，所以面板
+      # 注册默认启用。设为 false 可禁用。
       CSE_SERVICE_CENTER_ENABLED: ${CSE_SERVICE_CENTER_ENABLED:-true}
       CSE_SERVICE_CENTER_ADDR: http://cse:30100
       CSE_SERVICE_CENTER_PROJECT: ${CSE_SERVICE_CENTER_PROJECT:-default}
@@ -62,14 +62,14 @@ services:
       CSE_SERVICE_CENTER_ENVIRONMENT: ${CSE_SERVICE_CENTER_ENVIRONMENT:-development}
       CSE_POLLING_WAIT_SECONDS: ${CSE_POLLING_WAIT_SECONDS:-29}
       CSE_SOCKET_TIMEOUT_SECONDS: ${CSE_SOCKET_TIMEOUT_SECONDS:-40}
-      # Compose enables the one-shot Nacos -> KIE migration endpoint for this
-      # local environment; set NACOS_MIGRATION_ENABLED=false to disable it.
+      # Compose 为这个本地环境启用了一次性 Nacos -> KIE 迁移端点；
+      # 设 NACOS_MIGRATION_ENABLED=false 可禁用。
       NACOS_MIGRATION_ENABLED: ${NACOS_MIGRATION_ENABLED:-true}
       CSE_SSL_ENABLED: ${CSE_SSL_ENABLED:-false}
     ports:
-      # Nacos-compatible Config HTTP API exposed by this proxy.
+      # 本代理暴露的 Nacos 兼容 Config HTTP API。
       - "8080:8080"
-      # Nacos 2.x Config client gRPC (8080 + 1000).
+      # Nacos 2.x Config 客户端 gRPC（8080 + 1000）。
       - "9080:9080"
 
 volumes:

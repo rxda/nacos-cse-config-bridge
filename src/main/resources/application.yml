@@ -4,25 +4,24 @@ server:
 spring:
   threads:
     virtual:
-      # Spring MVC/Tomcat request handling also uses JDK virtual threads.
+      # Spring MVC/Tomcat 请求处理也使用 JDK 虚拟线程。
       enabled: true
   application:
     name: srv-nacos-cse-config-bridge
 
 srv-nacos-cse-config-bridge:
   migration:
-    # This endpoint writes source Nacos values into CSE. Enable explicitly.
+    # 该端点会把源 Nacos 的值写入 CSE。请显式启用。
     enabled: ${NACOS_MIGRATION_ENABLED:false}
   grpc:
-    # Nacos Config clients calculate this as the configured HTTP port + 1000.
-    # Set explicitly when the HTTP port is not the normal fixed port.
+    # Nacos Config 客户端按"配置的 HTTP 端口 + 1000"计算 gRPC 端口。
+    # HTTP 端口不是常规固定端口时请显式设置。
     port: ${NACOS_GRPC_PORT:0}
     enabled: ${NACOS_GRPC_ENABLED:true}
     max-inbound-message-size: ${NACOS_GRPC_MAX_INBOUND_MESSAGE_SIZE:16777216}
   service-center:
-    # Registration is active when CSE_SERVICE_CENTER_ADDR is set. A Config client
-    # only gets an instance when it supplies a business endpoint; the gRPC source
-    # port is never used.
+    # 设置了 CSE_SERVICE_CENTER_ADDR 后注册才生效。Config 客户端只有在
+    # 提供了业务端点时才会注册实例；绝不使用 gRPC 源端口。
     enabled: ${CSE_SERVICE_CENTER_ENABLED:true}
     server-addr: ${CSE_SERVICE_CENTER_ADDR:}
     project: ${CSE_SERVICE_CENTER_PROJECT:${CSE_PROJECT:default}}
@@ -33,17 +32,17 @@ srv-nacos-cse-config-bridge:
     heartbeat-interval-seconds: ${CSE_SERVICE_CENTER_HEARTBEAT_INTERVAL_SECONDS:15}
     instance-enabled: ${CSE_SERVICE_CENTER_INSTANCE_ENABLED:true}
     service-name-label: ${CSE_SERVICE_CENTER_SERVICE_NAME_LABEL:AppName}
-    # Nacos 2.5.2 prefixes labels from nacos.app.conn.labels with "app_".
-    # The proxy accepts both app_serviceHost/servicePort/serviceProtocol and the raw names.
+    # Nacos 2.5.2 会给 nacos.app.conn.labels 中的标签加上 "app_" 前缀。
+    # 代理同时接受 app_serviceHost/servicePort/serviceProtocol 和原始名称。
     host-label: ${CSE_SERVICE_CENTER_HOST_LABEL:serviceHost}
     port-label: ${CSE_SERVICE_CENTER_PORT_LABEL:servicePort}
     protocol-label: ${CSE_SERVICE_CENTER_PROTOCOL_LABEL:serviceProtocol}
-    # Optional fallback for clients that do not send business endpoint labels.
-    # Keep 0 to avoid registering a guessed instance endpoint.
+    # 不发送业务端点标签的客户端的回退值。
+    # 保持为 0，避免注册一个猜测出来的实例端点。
     instance-port: ${CSE_SERVICE_CENTER_INSTANCE_PORT:0}
     instance-host: ${CSE_SERVICE_CENTER_INSTANCE_HOST:}
-    # Optional advanced label containing a full URI. Disabled by default because the
-    # standard Nacos label collector rejects ":", "/" and "://" in label values.
+    # 可选的高级标签，包含完整 URI。默认禁用，因为
+    # 标准 Nacos 标签采集器拒绝标签值中的 ":"、"/" 和 "://"。
     endpoint-label: ${CSE_SERVICE_CENTER_ENDPOINT_LABEL:}
     default-service-name: ${CSE_SERVICE_CENTER_DEFAULT_SERVICE_NAME:}
     ssl-enabled: ${CSE_SERVICE_CENTER_SSL_ENABLED:false}

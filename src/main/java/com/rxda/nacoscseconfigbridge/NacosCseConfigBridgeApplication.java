@@ -10,7 +10,7 @@ import com.rxda.nacoscseconfigbridge.config.MigrationProperties;
 import com.rxda.nacoscseconfigbridge.config.ServiceCenterProperties;
 
 /**
- * Starts the Spring Boot application and registers all bridge configuration properties.
+ * 启动 Spring Boot 应用，并注册桥接的所有配置属性。
  */
 @SpringBootApplication
 @EnableConfigurationProperties({
@@ -22,9 +22,9 @@ import com.rxda.nacoscseconfigbridge.config.ServiceCenterProperties;
 public class NacosCseConfigBridgeApplication {
 
     /**
-     * Boots the embedded HTTP and Nacos gRPC endpoints.
+     * 启动内嵌 HTTP 和 Nacos gRPC 端点。
      *
-     * @param args standard Spring Boot command-line arguments
+     * @param args 标准的 Spring Boot 命令行参数
      */
     static void main(String[] args) {
         SpringApplication.run(NacosCseConfigBridgeApplication.class, args);

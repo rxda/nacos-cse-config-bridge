@@ -3,65 +3,65 @@ package com.rxda.nacoscseconfigbridge.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Settings for the Nacos 2.x Config gRPC compatibility server.
+ * Nacos 2.x Config gRPC 兼容服务的设置。
  */
 @ConfigurationProperties(prefix = "srv-nacos-cse-config-bridge.grpc")
 public class NacosGrpcProperties {
 
-    /** Port override; zero derives the port from the embedded HTTP port. */
+    /** 端口覆盖值；为 0 时根据内嵌 HTTP 端口推导。 */
     private int port;
     private boolean enabled = true;
     private int maxInboundMessageSize = 16 * 1024 * 1024;
 
     /**
-     * Returns the gRPC listen port override.
+     * 返回 gRPC 监听端口覆盖值。
      *
-     * @return configured port, or zero for automatic derivation
+     * @return 配置的端口，0 表示自动推导
      */
     public int getPort() {
         return port;
     }
 
     /**
-     * Sets the gRPC listen port override.
+     * 设置 gRPC 监听端口覆盖值。
      *
-     * @param port configured port, or zero for automatic derivation
+     * @param port 配置的端口，0 表示自动推导
      */
     public void setPort(int port) {
         this.port = port;
     }
 
     /**
-     * Returns whether the compatibility server is enabled.
+     * 返回兼容服务是否启用。
      *
-     * @return {@code true} when gRPC is enabled
+     * @return 启用 gRPC 时返回 {@code true}
      */
     public boolean isEnabled() {
         return enabled;
     }
 
     /**
-     * Enables or disables the compatibility server.
+     * 启用或禁用兼容服务。
      *
-     * @param enabled whether gRPC is enabled
+     * @param enabled 是否启用 gRPC
      */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
 
     /**
-     * Returns the maximum inbound gRPC message size.
+     * 返回 gRPC 入站消息的最大长度。
      *
-     * @return maximum message size in bytes
+     * @return 最大消息长度（字节）
      */
     public int getMaxInboundMessageSize() {
         return maxInboundMessageSize;
     }
 
     /**
-     * Sets the maximum inbound gRPC message size.
+     * 设置 gRPC 入站消息的最大长度。
      *
-     * @param maxInboundMessageSize maximum message size in bytes
+     * @param maxInboundMessageSize 最大消息长度（字节）
      */
     public void setMaxInboundMessageSize(int maxInboundMessageSize) {
         this.maxInboundMessageSize = maxInboundMessageSize;

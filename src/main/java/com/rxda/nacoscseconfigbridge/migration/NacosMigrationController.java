@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.rxda.nacoscseconfigbridge.config.MigrationProperties;
 
 /**
- * HTTP entry point for the optional Nacos-to-KIE migration operation.
+ * 可选的 Nacos 到 KIE 迁移操作的 HTTP 入口。
  */
 @RestController
 @RequestMapping("/srv-nacos-cse-config-bridge/v1/migration")
@@ -18,20 +18,20 @@ public class NacosMigrationController {
     private final MigrationProperties properties;
     private final NacosMigrationService migrationService;
     /**
-     * Creates the migration HTTP controller.
+     * 创建迁移 HTTP 控制器。
      *
-     * @param properties migration feature switch
-     * @param migrationService migration service
+     * @param properties 迁移功能开关
+     * @param migrationService 迁移服务
      */
     public NacosMigrationController(MigrationProperties properties, NacosMigrationService migrationService) {
         this.properties = properties;
         this.migrationService = migrationService;
     }
     /**
-     * Migrates explicitly selected or discovered Nacos configurations.
+     * 迁移明确选定或发现到的 Nacos 配置。
      *
-     * @param request migration source and selection options
-     * @return migration summary, or 404 when migration is disabled
+     * @param request 迁移源和选择选项
+     * @return 迁移汇总；迁移禁用时返回 404
      */
     @PostMapping("/configs")
     public ResponseEntity<NacosMigrationResponse> migrate(@RequestBody NacosMigrationRequest request) {

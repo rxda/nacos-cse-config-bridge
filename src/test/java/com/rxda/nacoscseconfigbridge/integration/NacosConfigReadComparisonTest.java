@@ -12,10 +12,10 @@ import com.alibaba.nacos.api.config.ConfigFactory;
 import com.alibaba.nacos.api.config.ConfigService;
 
 /**
- * Optional black-box comparison program. It is disabled unless explicitly
- * enabled because it talks to external Nacos and proxy processes.
+ * 可选的黑盒对比程序。除非显式启用，否则默认禁用，
+ * 因为它需要连接外部的 Nacos 和代理进程。
  *
- * Run with:
+ * 运行方式：
  * mvn -Dtest=NacosConfigReadComparisonTest -Dnacos.comparison.enabled=true \
  *   -Dnacos.source.addr=127.0.0.1:8848 -Dnacos.proxy.addr=127.0.0.1:8080 \
  *   -Dnacos.data-id=application.yaml -Dnacos.group=DEFAULT_GROUP test

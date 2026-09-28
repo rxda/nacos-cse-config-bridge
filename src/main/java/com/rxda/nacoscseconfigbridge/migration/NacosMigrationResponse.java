@@ -3,13 +3,13 @@ package com.rxda.nacoscseconfigbridge.migration;
 import java.util.List;
 
 /**
- * Summary returned after a migration run.
+ * 迁移任务结束后返回的汇总。
  *
- * @param total number of processed items
- * @param success number of successfully migrated items
- * @param skipped number of items skipped by policy
- * @param failed number of failed items
- * @param items per-item outcomes
+ * @param total 处理的条目数
+ * @param success 成功迁移的条目数
+ * @param skipped 按策略跳过的条目数
+ * @param failed 失败的条目数
+ * @param items 逐条结果
  */
 public record NacosMigrationResponse(
         int total,
@@ -18,7 +18,7 @@ public record NacosMigrationResponse(
         int failed,
         List<ItemResult> items) {
 
-    /** Details of one migrated configuration outcome. */
+    /** 单个配置迁移结果的详情。 */
     public record ItemResult(String dataId, String group, String tenant, String status, String message) {
     }
 }

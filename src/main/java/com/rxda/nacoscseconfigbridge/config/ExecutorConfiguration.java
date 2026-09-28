@@ -10,47 +10,47 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
 
 /**
- * Creates the executors used by protocol handling, long polling, and heartbeats.
+ * 创建协议处理、长轮询和心跳所用的执行器。
  */
 @Configuration
 @EnableAsync
 public class ExecutorConfiguration {
     /**
-     * Creates a virtual-thread executor for Nacos HTTP listener requests.
+     * 为 Nacos HTTP 监听请求创建虚拟线程执行器。
      *
-     * @return executor for listener tasks
+     * @return 监听任务执行器
      */
     @Bean(name = "nacosListenerExecutor", destroyMethod = "close")
     public ExecutorService nacosListenerExecutor() {
         return Executors.newThreadPerTaskExecutor(virtualThreads("nacos-listener-"));
     }
     /**
-     * Creates a virtual-thread executor for Nacos gRPC callbacks.
+     * 为 Nacos gRPC 回调创建虚拟线程执行器。
      *
-     * @return executor for gRPC tasks
+     * @return gRPC 任务执行器
      */
     @Bean(name = "nacosGrpcExecutor", destroyMethod = "close")
     public ExecutorService nacosGrpcExecutor() {
         return Executors.newThreadPerTaskExecutor(virtualThreads("nacos-grpc-"));
     }
     /**
-     * Creates the small platform-thread scheduler used for Service Center heartbeats.
+     * 创建用于服务中心心跳的小型平台线程调度器。
      *
-     * @return heartbeat scheduler
+     * @return 心跳调度器
      */
     @Bean(name = "nacosServiceCenterExecutor", destroyMethod = "close")
     public ScheduledExecutorService nacosServiceCenterExecutor() {
-        // Heartbeats are short periodic tasks. Keep a small platform-thread
-        // scheduler instead of creating an unbounded scheduler per client.
+        // 心跳是短小的周期性任务。使用小型的平台线程调度器，
+        // 而不是为每个客户端创建无界的调度器。
         return Executors.newScheduledThreadPool(2,
                 Thread.ofPlatform().name("cse-heartbeat-", 0).factory());
     }
 
     /**
-     * Creates a named virtual-thread factory.
+     * 创建带名称的虚拟线程工厂。
      *
-     * @param prefix thread name prefix
-     * @return virtual-thread factory
+     * @param prefix 线程名前缀
+     * @return 虚拟线程工厂
      */
     private static ThreadFactory virtualThreads(String prefix) {
         return Thread.ofVirtual().name(prefix, 0).factory();

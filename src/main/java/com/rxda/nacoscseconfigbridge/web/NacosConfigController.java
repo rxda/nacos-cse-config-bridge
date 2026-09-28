@@ -13,7 +13,7 @@ import com.rxda.nacoscseconfigbridge.cse.KieConfigStore;
 import com.rxda.nacoscseconfigbridge.nacos.NacosConfigKey;
 
 /**
- * Exposes the read-only Nacos HTTP Config API backed by KIE.
+ * 以 KIE 为后端，只读的 Nacos HTTP Config API。
  */
 
 @RestController
@@ -22,20 +22,20 @@ public class NacosConfigController {
 
     private final KieConfigStore configStore;
     /**
-     * Creates the read-only Nacos Config HTTP controller.
+     * 创建只读的 Nacos Config HTTP 控制器。
      *
-     * @param configStore exact KIE-backed configuration store
+     * @param configStore 精确的 KIE 配置存储
      */
     public NacosConfigController(KieConfigStore configStore) {
         this.configStore = configStore;
     }
     /**
-     * Reads one configuration document as its original text.
+     * 按原始文本读取一个配置文档。
      *
      * @param dataId Nacos dataId
      * @param group Nacos group
      * @param tenant Nacos tenant
-     * @return configuration content or HTTP 404
+     * @return 配置内容，或 HTTP 404
      */
     @GetMapping(produces = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<String> getConfig(
@@ -49,7 +49,7 @@ public class NacosConfigController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
     /**
-     * Rejects writes because this bridge intentionally exposes a read-only API.
+     * 拒绝写操作，因为本网桥有意只暴露只读 API。
      *
      * @return HTTP 405
      */
@@ -58,7 +58,7 @@ public class NacosConfigController {
         return ResponseEntity.status(405).build();
     }
     /**
-     * Rejects deletes because this bridge intentionally exposes a read-only API.
+     * 拒绝删除，因为本网桥有意只暴露只读 API。
      *
      * @return HTTP 405
      */

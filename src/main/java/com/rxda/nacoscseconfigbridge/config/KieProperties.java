@@ -3,7 +3,7 @@ package com.rxda.nacoscseconfigbridge.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Connection and polling settings for the CSE KIE configuration service.
+ * CSE KIE 配置服务的连接和轮询设置。
  */
 @ConfigurationProperties(prefix = "srv-nacos-cse-config-bridge.kie")
 public class KieProperties {
@@ -16,36 +16,36 @@ public class KieProperties {
     private boolean sslEnabled;
 
     /**
-     * Returns the comma-separated KIE server addresses.
+     * 返回逗号分隔的 KIE 服务地址。
      *
-     * @return KIE server addresses
+     * @return KIE 服务地址
      */
     public String getServerAddr() {
         return serverAddr;
     }
 
     /**
-     * Sets the comma-separated KIE server addresses.
+     * 设置逗号分隔的 KIE 服务地址。
      *
-     * @param serverAddr KIE server addresses
+     * @param serverAddr KIE 服务地址
      */
     public void setServerAddr(String serverAddr) {
         this.serverAddr = serverAddr;
     }
 
     /**
-     * Returns the KIE project used for bridge data.
+     * 返回用于桥接数据的 KIE 项目。
      *
-     * @return KIE project name
+     * @return KIE 项目名
      */
     public String getProject() {
         return project;
     }
 
     /**
-     * Sets the KIE project used for bridge data.
+     * 设置用于桥接数据的 KIE 项目。
      *
-     * @param project KIE project name
+     * @param project KIE 项目名
      */
     public void setProject(String project) {
         this.project = project;
@@ -70,54 +70,54 @@ public class KieProperties {
     }
 
     /**
-     * Returns the maximum KIE long-poll wait time.
+     * 返回 KIE 长轮询的最长等待时间。
      *
-     * @return wait time in seconds
+     * @return 等待时间（秒）
      */
     public int getPollingWaitSeconds() {
         return pollingWaitSeconds;
     }
 
     /**
-     * Sets the maximum KIE long-poll wait time.
+     * 设置 KIE 长轮询的最长等待时间。
      *
-     * @param pollingWaitSeconds wait time in seconds
+     * @param pollingWaitSeconds 等待时间（秒）
      */
     public void setPollingWaitSeconds(int pollingWaitSeconds) {
         this.pollingWaitSeconds = pollingWaitSeconds;
     }
 
     /**
-     * Returns the KIE socket timeout.
+     * 返回 KIE 套接字超时时间。
      *
-     * @return socket timeout in seconds
+     * @return 套接字超时时间（秒）
      */
     public int getSocketTimeoutSeconds() {
         return socketTimeoutSeconds;
     }
 
     /**
-     * Sets the KIE socket timeout.
+     * 设置 KIE 套接字超时时间。
      *
-     * @param socketTimeoutSeconds socket timeout in seconds
+     * @param socketTimeoutSeconds 套接字超时时间（秒）
      */
     public void setSocketTimeoutSeconds(int socketTimeoutSeconds) {
         this.socketTimeoutSeconds = socketTimeoutSeconds;
     }
 
     /**
-     * Returns whether TLS is enabled for KIE connections.
+     * 返回 KIE 连接是否启用 TLS。
      *
-     * @return {@code true} when TLS is enabled
+     * @return 启用 TLS 时返回 {@code true}
      */
     public boolean isSslEnabled() {
         return sslEnabled;
     }
 
     /**
-     * Sets whether TLS is enabled for KIE connections.
+     * 设置 KIE 连接是否启用 TLS。
      *
-     * @param sslEnabled whether TLS is enabled
+     * @param sslEnabled 是否启用 TLS
      */
     public void setSslEnabled(boolean sslEnabled) {
         this.sslEnabled = sslEnabled;
