@@ -22,6 +22,9 @@
         <spring-boot.version>3.5.15</spring-boot.version>
         <java-chassis.version>3.3.0</java-chassis.version>
         <nacos-client.version>2.5.2</nacos-client.version>
+        <!-- 是否跳过 JDK AOT 缓存训练。训练需要 Linux 构建机（依赖 coreutils 的 timeout 命令），
+             其他平台可用 -Daot.training.skip=true 跳过；跳过后 Docker 构建会因缺少 target/app.aot 而失败。 -->
+        <aot.training.skip>false</aot.training.skip>
     </properties>
 
     <dependencyManagement>
@@ -76,6 +79,83 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!-- JDK AOT 缓存训练：原来在 Dockerfile 的多阶段构建里做，现在移到 Maven 的 package 阶段，
+                 这样 Docker 构建就是单阶段了。训练通过短暂启动应用（约 20 秒后终止）记录类加载情况，
+                 生成 target/app.aot，供运行时 -XX:AOTMode=auto 加载。
+                 注意：
+                 - 训练用的 JDK 必须与 Docker 基础镜像里的 JDK 版本严格一致，否则缓存会被静默丢弃；
+                 - 训练时的 JVM 参数（特别是 UseCompactObjectHeaders）必须与运行时的 JAVA_TOOL_OPTIONS 一致；
+                 - 与 spring-boot:repackage 同属 package 阶段，靠插件声明顺序保证在可执行 JAR 生成之后运行。 -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.6.4</version>
+                <executions>
+                    <execution>
+                        <id>aot-training</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${aot.training.skip}</skip>
+                            <executable>timeout</executable>
+                            <arguments>
+                                <argument>-s</argument>
+                                <argument>TERM</argument>
+                                <argument>20s</argument>
+                                <argument>java</argument>
+                                <argument>-XX:AOTMode=record</argument>
+                                <argument>-XX:AOTCacheOutput=${project.build.directory}/app.aot</argument>
+                                <argument>-jar</argument>
+                                <argument>${project.build.directory}/${project.build.finalName}.jar</argument>
+                            </arguments>
+                            <environmentVariables>
+                                <!-- 与运行时一致的 JVM 参数，保证缓存中的对象布局与运行时匹配。 -->
+                                <JAVA_TOOL_OPTIONS>-XX:+UseCompactObjectHeaders -Xms32m -Xmx256m</JAVA_TOOL_OPTIONS>
+                                <!-- 训练期间只需要一个语法合法的 KIE 地址，不会连接任何外部服务。 -->
+                                <CSE_CONFIG_SERVER_ADDR>http://127.0.0.1:30110</CSE_CONFIG_SERVER_ADDR>
+                                <CSE_PROJECT>default</CSE_PROJECT>
+                                <CSE_SERVICE_CENTER_ENABLED>false</CSE_SERVICE_CENTER_ENABLED>
+                                <NACOS_MIGRATION_ENABLED>false</NACOS_MIGRATION_ENABLED>
+                            </environmentVariables>
+                            <!-- timeout 在终止应用后返回 124，这是训练成功的正常退出码。 -->
+                            <successCodes>
+                                <successCode>0</successCode>
+                                <successCode>124</successCode>
+                            </successCodes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- 校验 AOT 训练确实生成了非空的缓存文件，失败时尽早中断构建。 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.2.0</version>
+                <executions>
+                    <execution>
+                        <id>verify-aot-cache</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${aot.training.skip}</skip>
+                            <target>
+                                <condition property="aot.cache.valid">
+                                    <and>
+                                        <available file="${project.build.directory}/app.aot"/>
+                                        <length file="${project.build.directory}/app.aot" when="greater" length="0"/>
+                                    </and>
+                                </condition>
+                                <fail unless="aot.cache.valid"
+                                      message="AOT 训练未生成非空的 ${project.build.directory}/app.aot，请检查上面的训练日志。"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
