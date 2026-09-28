@@ -300,10 +300,14 @@ public class NacosMigrationService {
 
     private Map<String, String> labels(NacosConfigKey key) {
         Map<String, String> labels = new LinkedHashMap<>();
-        labels.put("app", kieClientFactory.app());
-        labels.put("environment", key.effectiveTenant());
-        labels.put("service", key.effectiveGroup());
-        labels.put("nacos-data-id", key.dataId());
+        // CSE app -> Nacos namespace/tenant。
+        labels.put("app", key.effectiveTenant());
+        // CSE environment -> Nacos group。
+        labels.put("environment", key.effectiveGroup());
+        // CSE service -> Nacos dataId。
+        labels.put("service", key.dataId());
+        // 自定义标签用于隔离源 Nacos 实例。
+        labels.put("nacos-id", kieClientFactory.app());
         return labels;
     }
     /** Builds the KIE collection endpoint for the configured project. */

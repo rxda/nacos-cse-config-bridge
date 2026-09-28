@@ -143,7 +143,13 @@ public class KieClientFactory {
         return addressManager.address();
     }
 
-    /** Returns the configured KIE application label. */
+    /**
+     * 返回配置的源 Nacos 实例标识。
+     *
+     * <p>该值会写入 KIE 的 {@code nacos-id} 自定义标签。</p>
+     *
+     * @return 源 Nacos 实例标识
+     */
     public String app() {
         return properties.getApp();
     }

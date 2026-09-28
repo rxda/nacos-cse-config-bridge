@@ -50,9 +50,8 @@ srv-nacos-cse-config-bridge:
   kie:
     server-addr: ${CSE_CONFIG_SERVER_ADDR:}
     project: ${CSE_PROJECT:}
-    # This identifies the source/configuration domain, not the Nacos client AppName.
-    # Use a different value for each independent Nacos source, and the same value
-    # for bridge replicas serving the same source.
+    # 该值标识源 Nacos 实例，并写入 KIE 自定义标签 nacos-id。
+    # 不同的独立 Nacos 源应使用不同的值；服务同一个源的桥接副本应使用相同的值。
     app: ${CSE_CONFIG_APP:nacos-config-bridge}
     polling-wait-seconds: ${CSE_POLLING_WAIT_SECONDS:29}
     socket-timeout-seconds: ${CSE_SOCKET_TIMEOUT_SECONDS:40}

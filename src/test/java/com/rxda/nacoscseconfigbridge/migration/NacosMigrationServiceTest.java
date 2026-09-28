@@ -195,20 +195,20 @@ class NacosMigrationServiceTest {
         request.andRespond(withSuccess(content, MediaType.TEXT_PLAIN));
     }
 
-    private void expectKieWrite(String dataId, String environment, String group, String content) {
-        expectKieWrite(dataId, environment, group, content, NacosConfigFormat.fromDataId(dataId));
+    private void expectKieWrite(String dataId, String namespace, String group, String content) {
+        expectKieWrite(dataId, namespace, group, content, NacosConfigFormat.fromDataId(dataId));
     }
 
     private void expectKieWrite(
-            String dataId, String environment, String group, String content, String valueType) {
+            String dataId, String namespace, String group, String content, String valueType) {
         server.expect(requestTo(KIE))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().json("""
                         {"key":"%s","value":"%s","value_type":"%s","status":"enabled",
-                         "labels":{"app":"migration-test","environment":"%s","service":"%s",
-                                   "nacos-data-id":"%s"}}
+                         "labels":{"app":"%s","environment":"%s","service":"%s",
+                                   "nacos-id":"migration-test"}}
                         """.formatted(dataId, escapeJson(content), valueType,
-                                environment, group, dataId)))
+                                namespace, group, dataId)))
                 .andRespond(withSuccess());
     }
 

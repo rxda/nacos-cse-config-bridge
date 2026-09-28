@@ -52,18 +52,18 @@ public class KieProperties {
     }
 
     /**
-     * Returns the application label used to isolate bridge data in KIE.
+     * 返回会写入 KIE {@code nacos-id} 自定义标签的源 Nacos 实例标识。
      *
-     * @return KIE application label
+     * @return 源 Nacos 实例标识
      */
     public String getApp() {
         return app;
     }
 
     /**
-     * Sets the application label used to isolate bridge data in KIE.
+     * 设置会写入 KIE {@code nacos-id} 自定义标签的源 Nacos 实例标识。
      *
-     * @param app KIE application label
+     * @param app 源 Nacos 实例标识
      */
     public void setApp(String app) {
         this.app = app;

@@ -59,14 +59,12 @@ public class KieConfigStore {
         Map<String, String> expectedLabels = identityLabels(key);
         Optional<KVDoc> document = response.documents().stream()
                 .filter(this::isEnabled)
-                // Do not rely only on KIE's match=exact parameter.  The raw
-                // endpoint is deliberately defensive because a hierarchical
-                // KIE query can otherwise return app/environment/service
-                // fallback documents with the same key.
+                // 不能只依赖 KIE 的 match=exact 参数。原始读取接口必须严格校验，
+                // 否则层级式 KIE 查询可能返回相同 key 的 CSE 作用域回退文档。
                 .filter(candidate -> expectedLabels.equals(candidate.getLabels()))
                 .filter(candidate -> key.dataId().equals(candidate.getKey()))
-                // KIE can briefly return more than one version of an item;
-                // match the same last-write-wins rule as the Java Chassis client.
+                // KIE 可能短暂返回同一配置项的多个版本；
+                // 这里采用与 Java Chassis 客户端相同的最后写入者胜出规则。
                 .max(Comparator.comparingLong(KVDoc::getUpdateTime));
         return new ReadResult(
                 response.changed(),
@@ -114,10 +112,14 @@ public class KieConfigStore {
      */
     private Map<String, String> identityLabels(NacosConfigKey key) {
         Map<String, String> labels = new LinkedHashMap<>();
-        labels.put("app", clientFactory.app());
-        labels.put("environment", key.effectiveTenant());
-        labels.put("service", key.effectiveGroup());
-        labels.put("nacos-data-id", key.dataId());
+        // CSE app -> Nacos namespace/tenant。
+        labels.put("app", key.effectiveTenant());
+        // CSE environment -> Nacos group。
+        labels.put("environment", key.effectiveGroup());
+        // CSE service -> Nacos dataId。
+        labels.put("service", key.dataId());
+        // 自定义标签用于隔离源 Nacos 实例。
+        labels.put("nacos-id", clientFactory.app());
         return labels;
     }
     /**

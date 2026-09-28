@@ -22,28 +22,27 @@ custom label= 自定义配置维度
 
 Nacos 配置的原生唯一身份是 `source + namespace(tenant) + group + dataId`。本桥接层将它映射为：
 
-```text
-KIE project                 = 一个桥接目标/配置域
-KIE label app               = 桥接源标识（由 CSE_CONFIG_APP 配置）
-KIE label environment       = Nacos namespace / tenant
-KIE label service           = Nacos group
-KIE custom label nacos-data-id = Nacos dataId
+```textKIE project                    = 一个桥接目标/配置域
+KIE label app                  = Nacos namespace / tenant
+KIE label environment          = Nacos group
+KIE label service              = Nacos dataId
+KIE custom label nacos-id      = Nacos 实例标识（由 CSE_CONFIG_APP 配置）
 ```
 
-`CSE_CONFIG_APP` 不是 Nacos 客户端的业务 `AppName`，也不是固定的业务服务名；它用于隔离不同的
-Nacos 源。连接同一个 Nacos 源的多个代理实例应使用相同的值；不同 Nacos 集群、租户体系或配置域
-应使用不同的 `CSE_CONFIG_APP`，或者使用不同的 `CSE_PROJECT`，否则相同的
+`CSE_CONFIG_APP` 不是 Nacos 客户端的业务 `AppName`，也不是固定的业务服务名；它用于标识不同的
+Nacos 实例并写入自定义标签 `nacos-id`。连接同一个 Nacos 实例的多个代理应使用相同的值；不同
+Nacos 实例应使用不同的 `CSE_CONFIG_APP`，或者使用不同的 `CSE_PROJECT`，否则相同的
 `namespace + group + dataId` 可能在 KIE 中发生覆盖/共用。默认值 `nacos-config-bridge` 只适合单一源的
-部署，生产环境多源部署必须显式设置，例如 `CSE_CONFIG_APP=nacos-prod`、`CSE_CONFIG_APP=nacos-test`。
+部署，生产环境多实例部署必须显式设置，例如 `CSE_CONFIG_APP=nacos-prod`、`CSE_CONFIG_APP=nacos-test`。
 
 ### 一个 CSE 对接多个 Nacos
 
-推荐为每个 Nacos 源运行一个桥接实例；这些实例可以共用同一个 CSE KIE 和 project，但必须使用不同的
+推荐为每个 Nacos 实例运行一个桥接实例；这些实例可以共用同一个 CSE KIE 和 project，但必须使用不同的
 `CSE_CONFIG_APP`：
 
 ```text
-Nacos-A -> bridge-A -> CSE KIE project=default, app=nacos-a
-Nacos-B -> bridge-B -> CSE KIE project=default, app=nacos-b
+Nacos-A -> bridge-A -> CSE KIE project=default, nacos-id=nacos-a
+Nacos-B -> bridge-B -> CSE KIE project=default, nacos-id=nacos-b
 ```
 
 例如：
@@ -64,7 +63,7 @@ CSE_CONFIG_APP=nacos-b
 
 然后分别对两个桥接实例执行迁移：`bridge-A` 的 `sourceServerAddr` 指向 Nacos-A，`bridge-B` 的
 `sourceServerAddr` 指向 Nacos-B。两个 Nacos 即使存在相同的
-`namespace + group + dataId`，也会因为 `app` 不同而在 KIE 中隔离。
+`namespace + group + dataId`，也会因为 `nacos-id` 不同而在 KIE 中隔离。
 
 不能让一个普通 Nacos 兼容端点仅凭 `dataId/group/namespace` 同时代理多个 Nacos 源：Nacos 客户端的
 请求中没有“源 Nacos 标识”，如果两个源存在相同的配置身份，桥接层无法可靠判断应该读取哪一个。
@@ -75,7 +74,7 @@ CSE 中的配置项使用 KIE 支持的实际类型。迁移时优先使用源 N
 类型时，才按 `dataId` 后缀兜底：`properties`/`eproperties` 使用 `properties`，`yaml`/`yml` 使用 `yaml`，
 `ini` 使用 `ini`，`json` 使用 `json`，`xml` 使用 `xml`，其他格式使用 `text`。
 桥接读取时直接读取 KIE 文档原始 `value`，不会因为 KIE 类型解析成扁平键值，因此配置内容和换行格式保持不变。
-读取请求始终携带 `app + environment + service + nacos-data-id` 四个标签并使用 `match=exact`，且返回后再次
+读取请求始终携带 `app + environment + service + nacos-id` 四个标签并使用 `match=exact`，且返回后再次
 校验文档标签和 `key == dataId`。因此不走 Java Chassis KIE 客户端的 app/environment/service 层级合并，
 一个 Nacos dataId 只返回对应的一份原文，不会把多个 YAML/Properties/JSON 文档拼接在一起。
 
