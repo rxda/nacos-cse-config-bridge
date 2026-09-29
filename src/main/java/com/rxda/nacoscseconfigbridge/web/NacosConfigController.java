@@ -1,5 +1,7 @@
 package com.rxda.nacoscseconfigbridge.web;
 
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,17 +20,11 @@ import com.rxda.nacoscseconfigbridge.nacos.NacosConfigKey;
 
 @RestController
 @RequestMapping("/nacos/v1/cs/configs")
+@RequiredArgsConstructor
 public class NacosConfigController {
 
     private final KieConfigStore configStore;
-    /**
-     * 创建只读的 Nacos Config HTTP 控制器。
-     *
-     * @param configStore 精确的 KIE 配置存储
-     */
-    public NacosConfigController(KieConfigStore configStore) {
-        this.configStore = configStore;
-    }
+
     /**
      * 按原始文本读取一个配置文档。
      *

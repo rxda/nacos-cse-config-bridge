@@ -14,9 +14,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.rxda.nacoscseconfigbridge.cse.KieConfigStore;
@@ -25,9 +25,8 @@ import com.rxda.nacoscseconfigbridge.cse.KieConfigStore;
  * 用精确 KIE 读取和共享长轮询协调 Nacos 监听请求。
  */
 @Service
+@Slf4j
 public class NacosListenerService {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(NacosListenerService.class);
 
     private final KieConfigStore configStore;
     private final ExecutorService listenerExecutor;
@@ -311,7 +310,7 @@ public class NacosListenerService {
                     if (!active.get()) {
                         return;
                     }
-                    LOGGER.warn("Unable to watch KIE configuration {} {}", key.dataId(),
+                    log.warn("Unable to watch KIE configuration {} {}", key.dataId(),
                             key.effectiveGroup(), e);
                     current = null;
                     try {
@@ -340,7 +339,7 @@ public class NacosListenerService {
                         subscriber.accept(key);
                     }
                 } catch (RuntimeException e) {
-                    LOGGER.debug("Nacos watch subscriber failed for {}", key.dataId(), e);
+                    log.debug("Nacos watch subscriber failed for {}", key.dataId(), e);
                 }
             }
         }

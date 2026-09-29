@@ -37,6 +37,8 @@ import com.alibaba.nacos.shaded.io.grpc.Status;
 import com.alibaba.nacos.shaded.io.grpc.stub.StreamObserver;
 
 import com.rxda.nacoscseconfigbridge.config.NacosGrpcProperties;
+import com.rxda.nacoscseconfigbridge.config.NacosAuthProperties;
+import com.rxda.nacoscseconfigbridge.auth.NacosAuthService;
 import com.rxda.nacoscseconfigbridge.cse.KieConfigStore;
 import com.rxda.nacoscseconfigbridge.nacos.NacosConfigKey;
 import com.rxda.nacoscseconfigbridge.nacos.NacosClientRegistration;
@@ -78,6 +80,8 @@ class NacosGrpcServerTest {
     private final ExecutorService listenerExecutor = Executors.newVirtualThreadPerTaskExecutor();
     private final ExecutorService grpcExecutor = Executors.newVirtualThreadPerTaskExecutor();
     private final RecordingRegistration registrations = new RecordingRegistration();
+    private final NacosAuthProperties authProperties = new NacosAuthProperties();
+    private NacosAuthService authService;
     private NacosGrpcServer server;
     private ManagedChannel channel;
     private int grpcPort;
@@ -92,9 +96,13 @@ class NacosGrpcServerTest {
 
         NacosGrpcProperties properties = new NacosGrpcProperties();
         properties.setPort(port);
+        authProperties.setEnabled(false);
+        authService = new NacosAuthService(authProperties);
+        authService.afterPropertiesSet();
         NacosListenerService listenerService = new NacosListenerService(configStore, listenerExecutor);
         server = new NacosGrpcServer(
                 properties,
+                authService,
                 configStore,
                 listenerService,
                 registrations,
@@ -102,6 +110,33 @@ class NacosGrpcServerTest {
                 8080);
         server.start();
         channel = ManagedChannelBuilder.forAddress("127.0.0.1", port).usePlaintext().build();
+    }
+
+    @Test
+    void rejectsUnauthorizedConfigRequestsWhenAuthenticationIsEnabled() throws Exception {
+        authProperties.setEnabled(true);
+        authProperties.setAcceptAnyCredentials(true);
+        authProperties.setTokenSecret("grpc-test-shared-secret");
+        authService.afterPropertiesSet();
+
+        RequestGrpc.RequestFutureStub stub = RequestGrpc.newFutureStub(channel);
+        ConfigQueryRequest unauthorized = ConfigQueryRequest.build(
+                "application.yaml", "DEFAULT_GROUP", "public");
+        Object unauthorizedResponse = GrpcUtils.parse(
+                stub.request(GrpcUtils.convert(unauthorized)).get(5, TimeUnit.SECONDS));
+        assertThat(unauthorizedResponse).isInstanceOf(ConfigQueryResponse.class);
+        ConfigQueryResponse denied = (ConfigQueryResponse) unauthorizedResponse;
+        assertThat(denied.isSuccess()).isFalse();
+        assertThat(denied.getErrorCode()).isEqualTo(ConfigQueryResponse.NO_RIGHT);
+
+        String token = authService.login("client", "secret").orElseThrow();
+        ConfigQueryRequest authorized = ConfigQueryRequest.build(
+                "application.yaml", "DEFAULT_GROUP", "public");
+        authorized.putHeader("accessToken", token);
+        Object authorizedResponse = GrpcUtils.parse(
+                stub.request(GrpcUtils.convert(authorized)).get(5, TimeUnit.SECONDS));
+        assertThat(authorizedResponse).isInstanceOf(ConfigQueryResponse.class);
+        assertThat(((ConfigQueryResponse) authorizedResponse).isSuccess()).isTrue();
     }
 
     @AfterEach

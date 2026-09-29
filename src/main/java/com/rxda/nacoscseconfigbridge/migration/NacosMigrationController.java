@@ -1,5 +1,7 @@
 package com.rxda.nacoscseconfigbridge.migration;
 
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,20 +15,12 @@ import com.rxda.nacoscseconfigbridge.config.MigrationProperties;
  */
 @RestController
 @RequestMapping("/srv-nacos-cse-config-bridge/v1/migration")
+@RequiredArgsConstructor
 public class NacosMigrationController {
 
     private final MigrationProperties properties;
     private final NacosMigrationService migrationService;
-    /**
-     * 创建迁移 HTTP 控制器。
-     *
-     * @param properties 迁移功能开关
-     * @param migrationService 迁移服务
-     */
-    public NacosMigrationController(MigrationProperties properties, NacosMigrationService migrationService) {
-        this.properties = properties;
-        this.migrationService = migrationService;
-    }
+
     /**
      * 迁移明确选定或发现到的 Nacos 配置。
      *

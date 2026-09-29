@@ -11,6 +11,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import lombok.extern.slf4j.Slf4j;
+
 import org.apache.servicecomb.foundation.auth.AuthHeaderProvider;
 import org.apache.servicecomb.http.client.auth.RequestAuthHeaderProvider;
 import org.apache.servicecomb.http.client.common.HttpConfiguration;
@@ -23,8 +25,6 @@ import org.apache.servicecomb.service.center.client.model.MicroserviceInstanceSt
 import org.apache.servicecomb.service.center.client.model.MicroserviceStatus;
 import org.apache.servicecomb.service.center.client.model.RegisteredMicroserviceInstanceResponse;
 import org.apache.servicecomb.service.center.client.model.RegisteredMicroserviceResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -42,9 +42,9 @@ import com.rxda.nacoscseconfigbridge.nacos.NacosClientRegistration;
  * 源端口当作应用端口使用。</p>
  */
 @Service
+@Slf4j
 public class ServiceCenterRegistrationService implements NacosClientRegistration {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ServiceCenterRegistrationService.class);
     private static final String NACOS_SOURCE = "SDK";
     private static final String DEFAULT_PROTOCOL = "http";
     private static final String DEFAULT_CSE_ENVIRONMENT = "development";
@@ -76,9 +76,9 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
         boolean configured = properties.isEnabled() && StringUtils.hasText(properties.getServerAddr());
         this.client = configured ? createClient(properties, authHeaderProviders) : null;
         if (configured) {
-            LOGGER.info("CSE Service Center observation registration is enabled: {}", properties.getServerAddr());
+            log.info("CSE Service Center observation registration is enabled: {}", properties.getServerAddr());
         } else if (properties.isEnabled()) {
-            LOGGER.warn("CSE Service Center registration is enabled but no server address was configured");
+            log.warn("CSE Service Center registration is enabled but no server address was configured");
         }
     }
 
@@ -119,7 +119,7 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
             serviceName = properties.getDefaultServiceName();
         }
         if (!StringUtils.hasText(serviceName)) {
-            LOGGER.warn("Ignoring Nacos client without appName label; configure "
+            log.warn("Ignoring Nacos client without appName label; configure "
                     + "srv-nacos-cse-config-bridge.service-center.default-service-name to opt into a fallback");
             return () -> {
             };
@@ -131,7 +131,7 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
                     ? endpoint(safeLabels, remoteHost)
                     : null;
             if (endpoint == null) {
-                LOGGER.info("Registered CSE microservice {} without an instance endpoint; "
+                log.info("Registered CSE microservice {} without an instance endpoint; "
                         + "the Nacos Config client did not provide a business port", serviceName);
                 return () -> {
                 };
@@ -139,7 +139,7 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
             return registerInstance(serviceId, serviceName, endpoint, safeLabels);
         } catch (RuntimeException e) {
             // 服务中心不能拖垮 Nacos Config 兼容链路。
-            LOGGER.warn("Unable to mirror Nacos client {} into CSE Service Center", serviceName, e);
+            log.warn("Unable to mirror Nacos client {} into CSE Service Center", serviceName, e);
             return () -> {
             };
         }
@@ -227,7 +227,7 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
                     TimeUnit.SECONDS);
             active = new ActiveRegistration(key, serviceId, instanceId, heartbeat);
             activeInstances.put(key, active);
-            LOGGER.info("Registered CSE instance {} for {} at {}", instanceId, serviceName, endpoint.value());
+            log.info("Registered CSE instance {} for {} at {}", instanceId, serviceName, endpoint.value());
             return active;
         }
     }
@@ -241,10 +241,10 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
     private void sendHeartbeat(String serviceName, String serviceId, String instanceId) {
         try {
             if (!client.sendHeartBeat(serviceId, instanceId)) {
-                LOGGER.warn("CSE heartbeat rejected for {} instance {}", serviceName, instanceId);
+                log.warn("CSE heartbeat rejected for {} instance {}", serviceName, instanceId);
             }
         } catch (RuntimeException e) {
-            LOGGER.warn("CSE heartbeat failed for {} instance {}", serviceName, instanceId, e);
+            log.warn("CSE heartbeat failed for {} instance {}", serviceName, instanceId, e);
         }
     }
     /**
@@ -282,7 +282,7 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
             }
             return new Endpoint(unbracketHost(uriHost), uri.toString());
         } catch (IllegalArgumentException e) {
-            LOGGER.warn("Ignoring invalid CSE business endpoint labels for host {} and port {}", host, portText);
+            log.warn("Ignoring invalid CSE business endpoint labels for host {} and port {}", host, portText);
             return null;
         }
     }
@@ -300,7 +300,7 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
             }
             return new Endpoint(uri.getHost(), uri.toString());
         } catch (IllegalArgumentException e) {
-            LOGGER.warn("Ignoring invalid CSE endpoint label {}", explicit);
+            log.warn("Ignoring invalid CSE endpoint label {}", explicit);
             return null;
         }
     }
@@ -453,9 +453,9 @@ public class ServiceCenterRegistrationService implements NacosClientRegistration
                 heartbeat.cancel(false);
                 try {
                     client.deleteMicroserviceInstance(serviceId, instanceId);
-                    LOGGER.info("Unregistered CSE instance {}", instanceId);
+                    log.info("Unregistered CSE instance {}", instanceId);
                 } catch (RuntimeException e) {
-                    LOGGER.warn("Unable to unregister CSE instance {}", instanceId, e);
+                    log.warn("Unable to unregister CSE instance {}", instanceId, e);
                 }
             }
         }

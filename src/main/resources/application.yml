@@ -10,6 +10,18 @@ spring:
     name: srv-nacos-cse-config-bridge
 
 srv-nacos-cse-config-bridge:
+  auth:
+    # 关闭时读取接口不需要令牌；开启后客户端必须先调用登录接口。
+    enabled: ${NACOS_AUTH_ENABLED:false}
+    # 开启鉴权后，true 表示任意非空用户名密码都能登录，
+    # false 表示只有 username/password 中配置的组合才能登录。
+    accept-any-credentials: ${NACOS_AUTH_ACCEPT_ANY_CREDENTIALS:false}
+    username: ${NACOS_AUTH_USERNAME:nacos}
+    password: ${NACOS_AUTH_PASSWORD:}
+    token-ttl-seconds: ${NACOS_AUTH_TOKEN_TTL_SECONDS:18000}
+    # 无状态令牌的共享签名密钥。多副本必须配置同一个值。
+    # 严格模式留空时会从用户名和密码派生；任意凭据模式必须显式配置。
+    token-secret: ${NACOS_AUTH_TOKEN_SECRET:}
   migration:
     # 该端点会把源 Nacos 的值写入 CSE。请显式启用。
     enabled: ${NACOS_MIGRATION_ENABLED:false}

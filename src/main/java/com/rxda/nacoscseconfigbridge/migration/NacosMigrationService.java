@@ -340,18 +340,18 @@ public class NacosMigrationService {
         return new NacosMigrationResponse(
                 results.size(), success, skipped, results.size() - success - skipped, List.copyOf(results));
     }
-    /** Normalizes a Nacos base address by adding an HTTP scheme when absent. */
+    /** 规范化 Nacos 基础地址；缺少协议时补上 HTTP scheme。 */
 
     private String normalizeAddress(String address) {
         String value = address.trim();
         return value.startsWith("http://") || value.startsWith("https://") ? value : "http://" + value;
     }
-    /** Returns the Nacos default group when the request omits the group. */
+    /** 请求未指定 group 时返回 Nacos 默认分组。 */
 
     private String effectiveGroup(String group) {
         return group == null || group.isBlank() ? "DEFAULT_GROUP" : group;
     }
-    /** Returns the Nacos default group when the request omits the group. */
+    /** 请求和条目都未指定租户时返回 Nacos 默认 public 租户。 */
 
     private String effectiveTenant(String itemTenant, String requestTenant) {
         if (itemTenant != null && !itemTenant.isBlank()) {
@@ -359,17 +359,17 @@ public class NacosMigrationService {
         }
         return requestTenant == null || requestTenant.isBlank() ? "public" : requestTenant;
     }
-    /** Converts the public tenant to the empty tenant query value used by Nacos. */
+    /** 把 public 租户转换为 Nacos 查询接口使用的空租户值。 */
 
     private String nacosTenant(String tenant) {
         return "public".equals(tenant) ? "" : tenant;
     }
-    /** Converts an optional response field to a string. */
+    /** 把可选的响应字段转换为字符串。 */
 
     private String asString(Object value) {
         return value == null ? null : value.toString();
     }
-    /** Converts an optional response field to an integer, defaulting to zero. */
+    /** 把可选的响应字段转换为整数，转换失败时返回 0。 */
 
     private int asInt(Object value) {
         if (value instanceof Number number) {
@@ -384,13 +384,13 @@ public class NacosMigrationService {
             return 0;
         }
     }
-    /** Creates a per-item migration result. */
+    /** 创建单条配置的迁移结果。 */
 
     private NacosMigrationResponse.ItemResult result(
             String dataId, String group, String tenant, String status, String message) {
         return new NacosMigrationResponse.ItemResult(dataId, group, tenant, status, message);
     }
-    /** Extracts a non-empty diagnostic message from an exception. */
+    /** 从异常中提取非空诊断信息，没有时返回异常类名。 */
 
     private String safeMessage(RuntimeException e) {
         String message = e.getMessage();

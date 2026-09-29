@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 import com.rxda.nacoscseconfigbridge.config.KieProperties;
+import com.rxda.nacoscseconfigbridge.config.NacosAuthProperties;
 import com.rxda.nacoscseconfigbridge.config.NacosGrpcProperties;
 import com.rxda.nacoscseconfigbridge.config.MigrationProperties;
 import com.rxda.nacoscseconfigbridge.config.ServiceCenterProperties;
@@ -15,6 +16,7 @@ import com.rxda.nacoscseconfigbridge.config.ServiceCenterProperties;
 @SpringBootApplication
 @EnableConfigurationProperties({
         KieProperties.class,
+        NacosAuthProperties.class,
         NacosGrpcProperties.class,
         MigrationProperties.class,
         ServiceCenterProperties.class

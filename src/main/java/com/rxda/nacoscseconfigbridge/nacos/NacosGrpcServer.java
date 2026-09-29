@@ -54,6 +54,7 @@ import com.alibaba.nacos.shaded.io.grpc.Grpc;
 import com.alibaba.nacos.shaded.io.grpc.Metadata;
 import com.alibaba.nacos.shaded.io.grpc.stub.StreamObserver;
 
+import com.rxda.nacoscseconfigbridge.auth.NacosAuthService;
 import com.rxda.nacoscseconfigbridge.cse.KieConfigStore;
 import com.rxda.nacoscseconfigbridge.config.NacosGrpcProperties;
 
@@ -74,6 +75,7 @@ public class NacosGrpcServer implements SmartLifecycle {
     }
 
     private final NacosGrpcProperties properties;
+    private final NacosAuthService authService;
     private final KieConfigStore configStore;
     private final NacosListenerService listenerService;
     private final NacosClientRegistration clientRegistration;
@@ -89,6 +91,7 @@ public class NacosGrpcServer implements SmartLifecycle {
      * 创建 Nacos gRPC 服务，并将其与 KIE 监听服务接线。
      *
      * @param properties gRPC 端口与消息大小设置
+     * @param authService Nacos 登录令牌校验服务
      * @param configStore 精确配置存储
      * @param listenerService 长轮询监听协调器
      * @param clientRegistration 可选的服务中心注册边界
@@ -97,12 +100,14 @@ public class NacosGrpcServer implements SmartLifecycle {
      */
     public NacosGrpcServer(
             NacosGrpcProperties properties,
+            NacosAuthService authService,
             KieConfigStore configStore,
             NacosListenerService listenerService,
             NacosClientRegistration clientRegistration,
             @Qualifier("nacosGrpcExecutor") Executor grpcExecutor,
             @Value("${server.port:8080}") int httpPort) {
         this.properties = properties;
+        this.authService = authService;
         this.configStore = configStore;
         this.listenerService = listenerService;
         this.clientRegistration = clientRegistration;
@@ -180,19 +185,46 @@ public class NacosGrpcServer implements SmartLifecycle {
             return new ClientDetectionResponse();
         }
         if (request instanceof ConfigQueryRequest query) {
+            if (!isAuthorized(request)) {
+                return ConfigQueryResponse.buildFailResponse(
+                        ConfigQueryResponse.NO_RIGHT, "invalid or missing accessToken");
+            }
             return query(query);
         }
         if (request instanceof ConfigBatchListenRequest listen) {
+            if (!isAuthorized(request)) {
+                return ConfigChangeBatchListenResponse.buildFailResponse(
+                        "invalid or missing accessToken");
+            }
             return listen(listen, remoteAddress);
         }
         if (request instanceof ConfigPublishRequest) {
+            if (!isAuthorized(request)) {
+                return ConfigPublishResponse.buildFailResponse(
+                        ConfigQueryResponse.NO_RIGHT, "invalid or missing accessToken");
+            }
             return ConfigPublishResponse.buildFailResponse(405, "This proxy is read-only; publish in CSE");
         }
         if (request instanceof ConfigRemoveRequest) {
+            if (!isAuthorized(request)) {
+                return ConfigRemoveResponse.buildFailResponse("invalid or missing accessToken");
+            }
             return ConfigRemoveResponse.buildFailResponse("This proxy is read-only; remove in CSE");
         }
         return ErrorResponse.build(NacosException.SERVER_ERROR,
                 "Unsupported Nacos Config request: " + request.getClass().getSimpleName());
+    }
+
+    /** 校验业务 Nacos 请求携带的登录令牌。 */
+    private boolean isAuthorized(Request request) {
+        String token = request.getHeader("accessToken");
+        if (token == null || token.isBlank()) {
+            String authorization = request.getHeader("Authorization");
+            if (authorization != null && authorization.startsWith("Bearer ")) {
+                token = authorization.substring("Bearer ".length());
+            }
+        }
+        return authService.isTokenValid(token);
     }
     /** 读取请求的配置或元数据。 */
 

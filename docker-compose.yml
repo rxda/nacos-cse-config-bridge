@@ -48,6 +48,16 @@ services:
     environment:
       SERVER_PORT: 8080
       JAVA_TOOL_OPTIONS: "${JAVA_TOOL_OPTIONS:--XX:+UseCompactObjectHeaders -Xms32m -Xmx256m -XX:AOTMode=auto -XX:AOTCache=/app/app.aot}"
+      # 桥接自身的 Nacos 鉴权。默认关闭以兼容现有客户端；
+      # 开启后 accept-any=true 接受任意非空用户名密码，
+      # false 则只接受下面配置的用户名和密码。
+      NACOS_AUTH_ENABLED: ${NACOS_AUTH_ENABLED:-false}
+      NACOS_AUTH_ACCEPT_ANY_CREDENTIALS: ${NACOS_AUTH_ACCEPT_ANY_CREDENTIALS:-false}
+      NACOS_AUTH_USERNAME: ${NACOS_AUTH_USERNAME:-nacos}
+      NACOS_AUTH_PASSWORD: ${NACOS_AUTH_PASSWORD:-}
+      NACOS_AUTH_TOKEN_TTL_SECONDS: ${NACOS_AUTH_TOKEN_TTL_SECONDS:-18000}
+      # 无状态令牌的共享签名密钥；多副本必须使用完全相同的值。
+      NACOS_AUTH_TOKEN_SECRET: ${NACOS_AUTH_TOKEN_SECRET:-}
       # KIE API 由 CSE 容器在其内部网络上暴露。
       CSE_CONFIG_SERVER_ADDR: http://cse:30110
       CSE_PROJECT: ${CSE_PROJECT:-default}

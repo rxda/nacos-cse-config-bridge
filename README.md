@@ -208,6 +208,73 @@ BiStream 主动发送 `ConfigChangeNotifyRequest`。因此 Nacos 客户端和
 没有连上代理的 `HTTP 端口 + 1000` gRPC 端口，动态通知不会工作；Compose 中对应关系是
 `8080 -> 9080`。
 
+## 桥接的 Nacos 鉴权
+
+桥接默认关闭自身鉴权，以保持现有 Nacos 客户端无需修改即可继续读取。开启后，客户端必须先调用
+Nacos 登录接口取得 `accessToken`，随后的 HTTP 读取、HTTP 长轮询以及 gRPC ConfigQuery、
+ConfigBatchListen 请求都必须携带该令牌。登录接口与原生 Nacos 兼容：
+
+```bash
+curl -X POST http://localhost:8080/nacos/v1/auth/users/login \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'username=app-user' \
+  --data-urlencode 'password=app-password'
+```
+
+成功响应包含 Nacos 客户端需要的 `accessToken` 和 `tokenTtl`。桥接也兼容别名路径
+`/nacos/v1/auth/login`。HTTP 请求可以从 `accessToken` 查询参数、`accessToken` 请求头或
+`Authorization: Bearer <token>` 请求头中读取令牌；gRPC 客户端会按 Nacos 协议把它放在请求
+`headers.accessToken` 中。
+
+通过客户服务（即桥接服务）的环境变量选择凭据校验方式：
+
+| 环境变量 | 默认值 | 含义 |
+| --- | --- | --- |
+| `NACOS_AUTH_ENABLED` | `false` | 是否要求读取和监听请求携带有效令牌 |
+| `NACOS_AUTH_ACCEPT_ANY_CREDENTIALS` | `false` | 为 `true` 时任意非空用户名密码都能登录；为 `false` 时只接受下面配置的组合 |
+| `NACOS_AUTH_USERNAME` | `nacos` | 严格模式允许的用户名 |
+| `NACOS_AUTH_PASSWORD` | 空 | 严格模式允许的密码；严格模式启用时必须显式设置非空值 |
+| `NACOS_AUTH_TOKEN_TTL_SECONDS` | `18000` | 登录令牌有效期，单位为秒 |
+| `NACOS_AUTH_TOKEN_SECRET` | 空 | 所有副本共享的无状态令牌签名密钥；严格模式留空时从用户名和密码派生，任意凭据模式必须配置 |
+
+严格模式示例：
+
+```bash
+NACOS_AUTH_ENABLED=true \
+NACOS_AUTH_ACCEPT_ANY_CREDENTIALS=false \
+NACOS_AUTH_USERNAME=app-user \
+NACOS_AUTH_PASSWORD=change-me \
+NACOS_AUTH_TOKEN_SECRET='请替换成所有副本共享的随机密钥' \
+docker compose up -d
+```
+
+可以使用随机字符串或 `openssl rand -base64 32` 生成密钥。多副本部署时，每个副本的
+`NACOS_AUTH_TOKEN_SECRET` 必须完全一致，否则某个副本签发的令牌无法在另一个副本上验证。
+严格模式不配置该变量时，会从相同的用户名和密码确定性地派生密钥；修改用户名或密码会自动
+使此前签发的令牌失效。生产环境仍建议显式设置高熵密钥，避免签名密钥直接依赖登录密码。
+
+客户端只需提供与上面一致的用户名和密码。例如 Spring Cloud Alibaba 配置：
+
+```yaml
+spring:
+  cloud:
+    nacos:
+      config:
+        server-addr: srv-nacos-cse-config-bridge:8080
+        username: app-user
+        password: change-me
+```
+
+`NACOS_AUTH_ACCEPT_ANY_CREDENTIALS=true` 只校验用户名和密码均非空，不校验身份，适合暂时兼容
+一批使用各自任意凭据的客户端，但不能用于需要身份认证或访问控制的环境。此模式无法从每个客户端
+各自不同的用户名密码派生出一致的签名密钥，因此启用时必须显式配置
+`NACOS_AUTH_TOKEN_SECRET`。两种模式都只保护本桥接，它不会修改 CSE KIE 自身的账号权限。
+
+令牌采用 `HMAC-SHA256` 签名并携带过期时间，不保存在桥接进程内。桥接重启不会使令牌失效；
+多个副本使用相同签名密钥时，也不需要负载均衡会话保持，任一副本签发的令牌都能由其他副本验证。
+无状态令牌没有服务端吊销名单，因此吊销单个令牌只能等待其到期，或者让所有副本更换
+`NACOS_AUTH_TOKEN_SECRET` 后重启，这会使现有令牌全部失效。
+
 ## Docker Compose
 
 先使用 Maven 生成 Spring Boot JAR，再启动 Nacos 2.5.2、CSE 2.1.5 和代理：
