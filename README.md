@@ -96,6 +96,26 @@ SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR=http://srv-nacos-cse-config-bridge:8080
 当前 Nacos 兼容接口只实现读取和动态监听；通过 Nacos 兼容接口发布、删除会返回 `405`。
 配置迁移是单独的、显式开启的导入接口，写入目标为 CSE KIE。
 
+## 客户端账号密码登录
+
+配置了 `username`/`password` 的 Nacos 客户端在读取任何配置之前都会先登录:默认请求
+`POST /nacos/v1/auth/users/login?username=...`(表单字段 `password`),客户端 `contextPath`
+为空时也会请求 `/v1/auth/users/login`,另有工具使用 `/v1/auth/login`。这些路径桥接层都实现,
+返回客户端解析所需的字段:
+
+```json
+{"accessToken":"<一次性随机值>","tokenTtl":18000,"globalAdmin":false,"username":"<提交的用户名>"}
+```
+
+桥接层没有用户表,所以**不校验**提交的用户名和密码,签发 access token 只是为了让客户端的登录流程
+正常结束。通过桥接层读取配置本来就不需要认证,因此这不会让安全性变差;需要认证时应在桥接层前面
+(网关/Ingress)完成。提交的用户名和密码不会写入日志。
+
+`tokenTtl` 为 18000 秒(与 Nacos 服务端默认一致),客户端会在过期前自动重新登录,重新登录同样成功,
+不会周期性报 `login failed`。不带账号密码的客户端不受影响,登录接口也不改变读取、监听和写入返回
+`405` 的行为。
+
+
 ## CSE Service Center 面板注册
 
 只要配置了 `CSE_SERVICE_CENTER_ADDR`，面板注册默认启用；未配置地址时不会创建客户端，也不会发起
