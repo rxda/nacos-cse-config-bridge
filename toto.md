@@ -51,6 +51,17 @@
 - 已在 README 补充 `/nacos/v1/auth/login` 获取 token 的完整命令和字段位置。
 - 已使用有效 token 实际调用 `allNamespaces=true`：public 和 dwyzt 两个 namespace 共 2 个配置，
   `success=2`、`failed=0`。
+- 已修复带 `username`/`password` 的 Nacos 客户端连接报错：桥接层原先没有登录接口，客户端登录
+  `POST /nacos/v1/auth/users/login` 返回 404，客户端每次连接和 token 刷新都会记录
+  `login failed` ERROR。现由 `web/NacosAuthController` 提供 `/nacos/v1/auth/users/login`、
+  `/v1/auth/users/login`、`/nacos/v1/auth/login`、`/v1/auth/login`，返回客户端必须解析的
+  `accessToken` 和 `tokenTtl=18000`；桥接层没有用户表，因此不校验提交的用户名密码（读取配置
+  本来就不需要认证），凭据不写日志，服务端只在首次登录时打一条 WARN 说明。
+- 已新增 `NacosAuthControllerTest`（3 个）和 `AuthenticatedNacosClientEndToEndTest`（2 个，
+  fake KIE + 带密码的真实 Nacos 客户端读取），`./mvnw test` 30 个通过、0 失败、1 个按需跳过。
+- 已重新 `./mvnw -DskipTests clean package` 并用可执行 JAR 验证：带密码客户端连接 18080，
+  客户端 `config.log`/`remote.log` 无 ERROR/WARN，`getConfig` 返回 fake KIE 内容。
+- README 新增「客户端账号密码登录」章节，说明登录路径、返回字段和不校验凭据的边界。
 
 ## 待处理
 
